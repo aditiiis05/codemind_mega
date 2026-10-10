@@ -30,6 +30,8 @@ export default function HomePage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState('');
+  // Track whether we're waiting for a callback token (avoids window access during SSR)
+  const [hasCallbackToken, setHasCallbackToken] = useState(false);
 
   // Check for existing token and handle OAuth callback
   useEffect(() => {
@@ -37,6 +39,7 @@ export default function HomePage() {
     const params = new URLSearchParams(window.location.search);
     const callbackToken = params.get('token');
     if (callbackToken) {
+      setHasCallbackToken(true);
       console.log('[Auth Success] Token received from backend callback');
       localStorage.setItem('github_token', callbackToken);
       setIsAuthenticated(true);
@@ -143,23 +146,19 @@ export default function HomePage() {
 
   // Not authenticated - show loading (will redirect via useEffect above)
   if (!isAuthenticated) {
-    // Don't redirect immediately - let useEffect handle it to check for callback token first
-    const params = new URLSearchParams(window.location.search);
-    const callbackToken = params.get('token');
-    
-    // If we're waiting for a callback, show loading
-    if (callbackToken || isSigningIn) {
-    return (
+    // If we're waiting for a callback token or actively signing in, show loading
+    if (hasCallbackToken || isSigningIn) {
+      return (
         <div className="min-h-screen bg-gradient-to-br from-[#0d1117] via-[#1a1a2e] to-[#16213e] flex items-center justify-center">
           <div className="text-center">
             <Loader className="w-12 h-12 text-[#2f81f7] animate-spin mx-auto mb-4" />
             <p className="text-[#7d8590]">Authenticating...</p>
           </div>
-            </div>
+        </div>
       );
     }
-    
-    // Otherwise redirect to login (useEffect will handle this, but show loading meanwhile)
+
+    // Otherwise show redirecting spinner (useEffect will redirect to /login)
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#0d1117] via-[#1a1a2e] to-[#16213e] flex items-center justify-center">
         <div className="text-center">
