@@ -6,6 +6,8 @@ require('dotenv').config();
 // Import routes
 const aiRoutes = require('./routes/ai');
 const githubRoutes = require('./routes/github');
+const flowchartRoutes = require('./routes/flowchart');
+const projectRoutes = require('./routes/project');
 
 // Create Express app FIRST
 const app = express();
@@ -42,6 +44,8 @@ app.get('/health', (req, res) => {
 // Mount routes
 app.use('/api/github', githubRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/flowchart', flowchartRoutes);
+app.use('/api/project', projectRoutes);
 
 // 404 handler
 app.use((req, res) => {
@@ -57,6 +61,8 @@ app.use((req, res) => {
       'POST /api/github/repos',
       'GET /api/github/repo-content',
       'POST /api/github/repo-content',
+      'POST /api/flowchart/analyze',
+      'POST /api/project/analyze',
       'POST /api/ai/complete',
       'POST /api/ai/analyze-repo',
       'POST /api/ai/generate-diagram',
