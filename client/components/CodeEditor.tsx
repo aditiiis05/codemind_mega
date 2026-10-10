@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import dynamic from 'next/dynamic';
 import axios from "axios";
 import { Sparkles, X, Check, AlertCircle, Loader2 } from 'lucide-react';
@@ -27,9 +27,19 @@ type Props = {
   height?: string;
   onChange?: (value: string | undefined) => void;
   readOnly?: boolean;
+  highlightRange?: { lineStart: number; lineEnd: number; source?: string } | null;
+  onCursorChange?: (line: number) => void;
 };
 
-const CodeEditor = ({ code, language, height = "70vh", onChange, readOnly = false }: Props) => {
+const CodeEditor = ({
+  code,
+  language,
+  height = "70vh",
+  onChange,
+  readOnly = false,
+  highlightRange = null,
+  onCursorChange
+}: Props) => {
   const [suggestion, setSuggestion] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -123,10 +133,56 @@ const CodeEditor = ({ code, language, height = "70vh", onChange, readOnly = fals
     setError("");
   };
 
-  const editorRef = useRef(null);
+  const editorRef = useRef<any>(null);
+  const monacoRef = useRef<any>(null);
+  const decorationsRef = useRef<string[]>([]);
+
+  // Navigate and highlight lines when highlightRange updates
+  useEffect(() => {
+    if (!editorRef.current || !monacoRef.current) return;
+    const editor = editorRef.current;
+    const monaco = monacoRef.current;
+
+    if (!highlightRange) {
+      if (decorationsRef.current.length > 0) {
+        decorationsRef.current = editor.deltaDecorations(decorationsRef.current, []);
+      }
+      return;
+    }
+
+    const startLine = Math.max(1, highlightRange.lineStart);
+    const endLine = Math.max(startLine, highlightRange.lineEnd || startLine);
+
+    // Scroll line smoothly into view center
+    editor.revealLineInCenter(startLine);
+
+    // Select the range in editor
+    editor.setSelection(new monaco.Selection(startLine, 1, endLine, 1000));
+
+    // Apply high-visibility line highlight
+    decorationsRef.current = editor.deltaDecorations(decorationsRef.current, [
+      {
+        range: new monaco.Range(startLine, 1, endLine, 1000),
+        options: {
+          isWholeLine: true,
+          className: 'codemind-flowchart-line-highlight',
+          overviewRuler: {
+            color: '#0ea5e9',
+            position: monaco.editor.OverviewRulerLane.Full
+          }
+        }
+      }
+    ]);
+  }, [highlightRange]);
 
   const handleEditorDidMount = (editor: any, monaco: any) => {
     editorRef.current = editor;
+    monacoRef.current = monaco;
+
+    // Listen to cursor movement to inform parent / flowchart
+    editor.onDidChangeCursorPosition((e: any) => {
+      onCursorChange?.(e.position.lineNumber);
+    });
     
     // Configure Monaco theme
     monaco.editor.defineTheme('codemind-dark', {
@@ -148,7 +204,18 @@ const CodeEditor = ({ code, language, height = "70vh", onChange, readOnly = fals
   };
 
   return (
-    <div className="h-full flex flex-col bg-[#0d1117] border border-[#30363d]">
+    <div className="h-full flex flex-col bg-[#0d1117] border border-[#30363d] relative">
+      <style jsx global>{`
+        .codemind-flowchart-line-highlight {
+          background-color: rgba(14, 165, 233, 0.25) !important;
+          border-left: 3px solid #0ea5e9 !important;
+          animation: pulseHighlight 2s ease-in-out infinite alternate;
+        }
+        @keyframes pulseHighlight {
+          0% { background-color: rgba(14, 165, 233, 0.2); }
+          100% { background-color: rgba(14, 165, 233, 0.4); }
+        }
+      `}</style>
       {/* Toolbar */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-[#30363d] bg-[#161b22]">
         <div className="flex items-center gap-2">
