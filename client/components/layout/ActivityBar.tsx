@@ -1,6 +1,6 @@
 'use client';
 
-import { FileText, Search, GitBranch, Lightbulb, Zap, Settings, MoreHorizontal } from 'lucide-react';
+import { FileText, Search, GitBranch, Lightbulb, Zap, Settings, MoreHorizontal, Network } from 'lucide-react';
 
 interface ActivityBarProps {
   activeView: string;
@@ -11,7 +11,7 @@ const activities = [
   { id: 'explorer', icon: FileText, label: 'Explorer', color: 'text-blue-400' },
   { id: 'search', icon: Search, label: 'Search', color: 'text-green-400' },
   { id: 'git', icon: GitBranch, label: 'Source Control', color: 'text-purple-400' },
-  { id: 'mindmap', icon: Lightbulb, label: 'Mind Map', color: 'text-yellow-400' },
+  { id: 'mindmap', icon: Network, label: 'Flowchart', color: 'text-cyan-400' },
   { id: 'ai', icon: Zap, label: 'AI Assistant', color: 'text-orange-400' },
 ];
 

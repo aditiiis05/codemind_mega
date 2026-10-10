@@ -7,15 +7,16 @@ import MermaidChart from '../MermaidChart';
 interface MindMapViewProps {
   // This component now needs the FILE CONTENT, not the diagram code,
   // because it will send this content to the AI to be analyzed.
-  selectedFileContent: string | null;
+  selectedFileContent?: string | null;
   // Optional: Trigger generation externally
   triggerGeneration?: { type: 'flowchart' | 'mindmap' | null; timestamp?: number };
   // Optional: File metadata for better analysis
   fileName?: string | null;
   language?: string | null;
+  onGenerateVisualization?: (node: any, type: 'flowchart' | 'mindmap') => void;
 }
 
-export default function MindMapView({ selectedFileContent, triggerGeneration, fileName, language }: MindMapViewProps) {
+export default function MindMapView({ selectedFileContent = null, triggerGeneration, fileName, language }: MindMapViewProps) {
   const [mermaidCode, setMermaidCode] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

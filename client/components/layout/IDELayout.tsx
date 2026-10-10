@@ -113,7 +113,7 @@ export default function IDELayout({
       case 'explorer': return 'Explorer';
       case 'search': return 'Search';
       case 'git': return 'Source Control';
-      case 'mindmap': return 'Mind Map';
+      case 'mindmap': return 'Flowchart & Mind Map';
       case 'settings': return 'Settings';
       case 'extensions': return 'Extensions';
       default: return '';

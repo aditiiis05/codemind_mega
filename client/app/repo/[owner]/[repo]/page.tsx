@@ -3,10 +3,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import axios from 'axios';
-import { Code, File as FileIcon, FileText, FileImage, Sparkles, Loader2, AlertCircle } from 'lucide-react';
+import { Code, File as FileIcon, FileText, FileImage, Sparkles, Loader2, AlertCircle, Network } from 'lucide-react';
 import CodeEditor from '@/components/CodeEditor';
 import IDELayout from '@/components/layout/IDELayout';
 import MindMapView from '@/components/views/MindMapView'; // <--- IMPORTED VISUALIZER
+import FlowchartPanel from '@/components/flowchart/FlowchartPanel';
 import { FileNode } from '@/components/views/ExplorerView';
 import { EditorTab } from '@/components/layout/EditorTabs';
 
@@ -41,13 +42,23 @@ export default function RepoPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState('');
+  // allFiles accumulates every fetched GitHubFile across all directory expansions
+  const [allFiles, setAllFiles] = useState<GitHubFile[]>([]);
+  // repoContent holds only the CURRENT directory level shown in the explorer
   const [repoContent, setRepoContent] = useState<GitHubFile[]>([]);
   const [expandedDirs, setExpandedDirs] = useState<Record<string, boolean>>({});
+  const [dirContents, setDirContents] = useState<Record<string, GitHubFile[]>>({});
   const [selectedFile, setSelectedFile] = useState<GitHubFile | null>(null);
   const [fileContent, setFileContent] = useState('');
   const [isLoadingFile, setIsLoadingFile] = useState(false);
   const [streamingAnalysis, setStreamingAnalysis] = useState('');
   const [visualizationTrigger, setVisualizationTrigger] = useState<{ type: 'flowchart' | 'mindmap' | null; timestamp?: number }>({ type: null });
+
+  // Flowchart & Code Navigation States
+  const [highlightRange, setHighlightRange] = useState<{ lineStart: number; lineEnd: number; source?: string } | null>(null);
+  const [cursorLine, setCursorLine] = useState<number | null>(null);
+  const [rightPanelWidth, setRightPanelWidth] = useState<number>(540);
+  const [activeRightTab, setActiveRightTab] = useState<'flowchart' | 'mindmap'>('flowchart');
 
   const getFileExtension = (filename: string) => {
     return filename.split('.').pop()?.toLowerCase() || '';
@@ -243,14 +254,14 @@ export default function RepoPage() {
   const fetchRepoContent = useCallback(async (path: string = '') => {
     if (!owner || !repo) return;
     try {
-      setIsLoading(true);
+      if (!path) setIsLoading(true);
       setError('');
       const githubToken = localStorage.getItem('github_token');
       if (!githubToken) {
         throw new Error('GitHub authentication required. Please sign in with GitHub.');
       }
 
-      console.log(`[Repo] Fetching repository content for path: ${path}`);
+      console.log(`[Repo] Fetching repository content for path: "${path}"`);
 
       const response = await axios.get(
         `https://api.github.com/repos/${owner}/${repo}/contents/${path}`,
@@ -267,12 +278,21 @@ export default function RepoPage() {
         throw new Error('No data received from GitHub API');
       }
 
-      if (Array.isArray(response.data)) {
-        setRepoContent(response.data);
-      } else if ('message' in response.data) {
-        throw new Error((response.data as any).message);
+      const items: GitHubFile[] = Array.isArray(response.data) ? response.data : [response.data];
+
+      if (!path) {
+        // Root level — set as the base repo content
+        setRepoContent(items);
+        setAllFiles(items);
       } else {
-        setRepoContent([response.data]);
+        // Sub-directory — store under its path key
+        setDirContents(prev => ({ ...prev, [path]: items }));
+        // Also accumulate into allFiles for project analysis
+        setAllFiles(prev => {
+          const existingPaths = new Set(prev.map(f => f.path));
+          const newItems = items.filter(f => !existingPaths.has(f.path));
+          return [...prev, ...newItems];
+        });
       }
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || err.message || 'Failed to load repository content';
@@ -293,6 +313,10 @@ export default function RepoPage() {
   }, [fetchRepoContent]);
 
   const fetchFileContent = useCallback(async (file: GitHubFile) => {
+    // Set selected file immediately so the editor panel appears with a loading state
+    setSelectedFile(file);
+    setFileContent('// Loading...');
+
     try {
       setIsLoadingFile(true);
       setError('');
@@ -314,7 +338,6 @@ export default function RepoPage() {
 
       if (response.data.size > 1024 * 100) {
         setFileContent(`// File is too large to display (${(response.data.size / 1024).toFixed(1)}KB)`);
-        setSelectedFile(file);
         return;
       }
 
@@ -324,8 +347,6 @@ export default function RepoPage() {
       } else {
         setFileContent('// Unable to decode file content');
       }
-
-      setSelectedFile(file);
     } catch (err: any) {
       console.error('[File Error]', err);
       const errorMessage = err.response?.data?.message || err.message || 'Failed to load file content';
@@ -338,22 +359,67 @@ export default function RepoPage() {
 
   const handleItemClick = useCallback((item: GitHubFile) => {
     if (item.type === 'dir') {
+      const isExpanded = expandedDirs[item.path];
       setExpandedDirs(prev => ({
         ...prev,
-        [item.path]: !prev[item.path]
+        [item.path]: !isExpanded
       }));
-      fetchRepoContent(item.path);
+      // Only fetch if not already loaded
+      if (!isExpanded && !dirContents[item.path]) {
+        fetchRepoContent(item.path);
+      }
     } else {
       fetchFileContent(item);
     }
-  }, [fetchRepoContent, fetchFileContent]);
+  }, [expandedDirs, dirContents, fetchRepoContent, fetchFileContent]);
 
-  const convertToFileNodes = (githubFiles: GitHubFile[]): FileNode[] => {
-    return githubFiles.map(file => ({
-      id: file.path, // Use path instead of sha - paths are unique within a repo tree
-      name: file.name,
-      type: file.type === 'dir' ? 'directory' : 'file'
-    }));
+  // Code-to-flowchart navigation: click node -> open file & scroll to line
+  const handleNavigateToCode = useCallback(async (targetFilePath: string, lineStart: number, lineEnd?: number) => {
+    const cleanTarget = targetFilePath.replace(/\\/g, '/');
+    const isCurrent = selectedFile && (
+      selectedFile.path === cleanTarget ||
+      selectedFile.name === cleanTarget ||
+      cleanTarget.endsWith(selectedFile.name) ||
+      selectedFile.path.endsWith(cleanTarget)
+    );
+
+    if (!isCurrent) {
+      // Search in all accumulated files (root + subdirs)
+      const matchingFile = allFiles.find(
+        f => f.path === cleanTarget ||
+             f.name === cleanTarget ||
+             f.path.endsWith('/' + cleanTarget) ||
+             cleanTarget.endsWith(f.name)
+      );
+
+      if (matchingFile) {
+        await fetchFileContent(matchingFile);
+      }
+    }
+
+    setHighlightRange({
+      lineStart,
+      lineEnd: lineEnd || lineStart,
+      source: 'flowchart'
+    });
+  }, [selectedFile, allFiles, fetchFileContent]);
+
+  const convertToFileNodes = (rootFiles: GitHubFile[]): FileNode[] => {
+    // Recursively build a nested FileNode tree
+    function buildNodes(items: GitHubFile[]): FileNode[] {
+      return items.map(file => {
+        const node: FileNode = {
+          id: file.path,
+          name: file.name,
+          type: file.type === 'dir' ? 'directory' : 'file'
+        };
+        if (file.type === 'dir' && expandedDirs[file.path] && dirContents[file.path]) {
+          node.children = buildNodes(dirContents[file.path]);
+        }
+        return node;
+      });
+    }
+    return buildNodes(rootFiles);
   };
 
   const convertFileToNode = (file: GitHubFile | null): FileNode | null => {
@@ -366,26 +432,30 @@ export default function RepoPage() {
   };
 
   const handleFileNodeClick = (node: FileNode) => {
-    const githubFile = repoContent.find(f => f.path === node.id);
+    // Search all accumulated files (root + any loaded subdirectories)
+    const githubFile = allFiles.find(f => f.path === node.id);
     if (githubFile) {
       handleItemClick(githubFile);
     }
   };
 
   const handleDirToggle = (nodeId: string) => {
-    const dir = repoContent.find(f => f.path === nodeId);
-    if (dir && dir.type === 'dir') {
+    const dir = allFiles.find(f => f.path === nodeId && f.type === 'dir');
+    if (dir) {
+      const isExpanded = expandedDirs[dir.path];
       setExpandedDirs(prev => ({
         ...prev,
-        [dir.path]: !prev[dir.path]
+        [dir.path]: !isExpanded
       }));
-      fetchRepoContent(dir.path);
+      if (!isExpanded && !dirContents[dir.path]) {
+        fetchRepoContent(dir.path);
+      }
     }
   };
 
   const handleGenerateVisualization = (node: FileNode, type: 'flowchart' | 'mindmap') => {
-    // Find the GitHub file
-    const githubFile = repoContent.find(f => f.path === node.id);
+    // Find the GitHub file in all accumulated files
+    const githubFile = allFiles.find(f => f.path === node.id);
     if (githubFile && githubFile.type === 'file') {
       // Ensure file is selected and content is loaded
       if (!selectedFile || selectedFile.path !== githubFile.path) {
@@ -474,8 +544,8 @@ export default function RepoPage() {
           </button>
         </div>
 
-        {/* --- SPLIT VIEW AREA (Editor + Visualizer) --- */}
-        <div className="flex-1 flex flex-row overflow-hidden">
+        {/* --- SPLIT VIEW AREA (Editor + Flowchart/Visualizer) --- */}
+        <div className="flex-1 flex flex-row overflow-hidden relative">
           
           {/* LEFT: Code Editor */}
           <div className="flex-1 flex flex-col border-r border-[#30363d] min-w-0">
@@ -484,27 +554,100 @@ export default function RepoPage() {
                 code={fileContent}
                 language={getLanguage(selectedFile.name)}
                 height="100%"
-                onChange={(newContent) => setFileContent(newContent || '')}
+                onChange={(newContent) => {
+                  setFileContent(newContent || '');
+                  if (highlightRange) setHighlightRange(null);
+                }}
                 readOnly={false}
+                highlightRange={highlightRange}
+                onCursorChange={(line) => setCursorLine(line)}
               />
             ) : (
               <div className="flex items-center justify-center h-full text-center flex-col opacity-50">
                 <Code className="w-16 h-16 text-[#7d8590] mb-4" />
                 <p className="text-[#7d8590]">No file selected</p>
+                <p className="text-xs text-[#7d8590] mt-1">Select a file from the repository explorer</p>
               </div>
             )}
           </div>
 
-          {/* RIGHT: Mind Map / Visualization Panel */}
-          {/* Fixed width of 400px (or utilize resizing libraries in future) */}
-          <div className="w-[400px] shrink-0 bg-[#1e1e1e] flex flex-col border-l border-[#30363d]">
-             {/* Pass the ACTIVE file content to the Visualizer */}
-            <MindMapView
-              selectedFileContent={selectedFile ? fileContent : null}
-              triggerGeneration={visualizationTrigger}
-              fileName={selectedFile?.name || null}
-              language={selectedFile ? getLanguage(selectedFile.name) : null}
-            />
+          {/* RIGHT: Flowchart & Code Visualization Panel */}
+          <div
+            className="shrink-0 bg-[#0d1117] flex flex-col border-l border-[#30363d] transition-all duration-150"
+            style={{ width: `${rightPanelWidth}px` }}
+          >
+            {/* View Switcher Header (Interactive Flowchart vs Mind Map) */}
+            <div className="flex items-center justify-between px-2.5 py-1.5 bg-[#161b22] border-b border-[#30363d] select-none">
+              {/* Tab buttons */}
+              <div className="flex items-center gap-0.5 bg-[#0d1117] p-0.5 rounded-md border border-[#30363d]/70">
+                <button
+                  onClick={() => setActiveRightTab('flowchart')}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-semibold transition-colors ${
+                    activeRightTab === 'flowchart'
+                      ? 'bg-[#1f6feb] text-white'
+                      : 'text-[#7d8590] hover:text-[#c9d1d9] hover:bg-[#21262d]'
+                  }`}
+                >
+                  <Network size={12} />
+                  <span>Flowchart</span>
+                </button>
+                <button
+                  onClick={() => setActiveRightTab('mindmap')}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-semibold transition-colors ${
+                    activeRightTab === 'mindmap'
+                      ? 'bg-[#21262d] text-white border border-[#30363d]'
+                      : 'text-[#7d8590] hover:text-[#c9d1d9] hover:bg-[#21262d]'
+                  }`}
+                >
+                  <span>Mind Map</span>
+                </button>
+              </div>
+
+              {/* Width Presets */}
+              <div className="flex items-center gap-1">
+                <span className="text-[10px] text-[#484f58] font-medium mr-0.5">Width</span>
+                {([
+                  { w: 420, label: 'S' },
+                  { w: 560, label: 'M' },
+                  { w: 740, label: 'L' },
+                ] as const).map(({ w, label }) => (
+                  <button
+                    key={w}
+                    onClick={() => setRightPanelWidth(w)}
+                    className={`w-6 h-6 flex items-center justify-center rounded text-[10px] font-bold transition-colors ${
+                      rightPanelWidth === w
+                        ? 'bg-[#30363d] text-white'
+                        : 'text-[#7d8590] hover:text-[#c9d1d9] hover:bg-[#21262d]'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Panel Body */}
+            <div className="flex-1 overflow-hidden">
+              {activeRightTab === 'flowchart' ? (
+                <FlowchartPanel
+                  code={selectedFile ? fileContent : null}
+                  fileName={selectedFile?.name || null}
+                  language={selectedFile ? getLanguage(selectedFile.name) : null}
+                  repoFiles={repoContent}
+                  owner={owner}
+                  repo={repo}
+                  cursorLine={cursorLine}
+                  onNavigateToCode={handleNavigateToCode}
+                />
+              ) : (
+                <MindMapView
+                  selectedFileContent={selectedFile ? fileContent : null}
+                  triggerGeneration={visualizationTrigger}
+                  fileName={selectedFile?.name || null}
+                  language={selectedFile ? getLanguage(selectedFile.name) : null}
+                />
+              )}
+            </div>
           </div>
 
         </div>
