@@ -30,6 +30,8 @@ interface FlowToolbarProps {
   onRefresh: () => void;
   isAnalyzing?: boolean;
   fileName?: string | null;
+  detailLevel?: 'overview' | 'standard' | 'detailed';
+  onDetailLevelChange?: (level: 'overview' | 'standard' | 'detailed') => void;
 }
 
 export default function FlowToolbar({
@@ -40,7 +42,9 @@ export default function FlowToolbar({
   zoom, onZoomIn, onZoomOut, onFitToScreen, onResetZoom,
   showMinimap, onToggleMinimap,
   onRefresh, isAnalyzing = false,
-  fileName
+  fileName,
+  detailLevel = 'standard',
+  onDetailLevelChange
 }: FlowToolbarProps) {
   return (
     <div className="flex flex-col bg-[#161b22] border-b border-[#30363d] select-none">
@@ -134,7 +138,6 @@ export default function FlowToolbar({
           {viewMode === 'file' && (
             <span className="text-[#484f58] text-[10px]">Interactive Source Flowchart</span>
           )}
-
           {viewMode === 'function' && (
             <>
               <span className="text-[#484f58] shrink-0">fn:</span>
@@ -184,6 +187,30 @@ export default function FlowToolbar({
           )}
         </div>
       </div>
+
+      {/* ── Row 3: Detail level (only in file/function views) ── */}
+      {viewMode !== 'project' && onDetailLevelChange && (
+        <div className="flex items-center gap-2 px-2.5 pb-1.5 border-t border-[#30363d]/30 pt-1">
+          <span className="text-[10px] text-[#484f58] font-medium shrink-0">Detail:</span>
+          <div className="flex items-center gap-0.5 bg-[#0d1117] p-0.5 rounded border border-[#30363d]/70">
+            {([
+              { id: 'overview'  as const, label: 'Overview',  title: 'Major control structures only' },
+              { id: 'standard'  as const, label: 'Standard',  title: 'Full control flow (default)' },
+              { id: 'detailed'  as const, label: 'Detailed',  title: 'All nodes including minor statements' },
+            ]).map(lvl => (
+              <button key={lvl.id} onClick={() => onDetailLevelChange(lvl.id)}
+                title={lvl.title}
+                className={`px-2 py-0.5 text-[10px] rounded transition-colors font-medium ${
+                  detailLevel === lvl.id
+                    ? 'bg-[#1f6feb] text-white'
+                    : 'text-[#7d8590] hover:text-[#c9d1d9] hover:bg-[#21262d]'
+                }`}>
+                {lvl.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
     </div>
   );

@@ -26,24 +26,26 @@ export function getNodeDimensions(node: FlowNode): { width: number; height: numb
   switch (node.type) {
     case 'START':
     case 'END':
-      return { width: clamp(labelLen * 10 + 60, 140, 220), height: 50 };
+      return { width: clamp(labelLen * 10 + 80, 160, 240), height: 56 };
     case 'DECISION':
-      return { width: clamp(labelLen * 11 + 80, 220, 320), height: 100 };
+      // hexagon needs extra padding on left/right for the clip-path
+      return { width: clamp(labelLen * 11 + 100, 240, 360), height: 110 };
     case 'LOOP':
-      return { width: clamp(labelLen * 9 + 60, 200, 280), height: 80 };
+      return { width: clamp(labelLen * 9 + 80, 220, 320), height: 92 };
     case 'FUNCTION':
-      return { width: clamp(labelLen * 9 + 70, 230, 340), height: 84 };
+      return { width: clamp(labelLen * 9 + 90, 240, 360), height: 90 };
     case 'INPUT':
     case 'OUTPUT':
-      return { width: clamp(labelLen * 9 + 60, 210, 320), height: 72 };
+      return { width: clamp(labelLen * 9 + 80, 230, 340), height: 84 };
     case 'RETURN':
-      return { width: clamp(labelLen * 9 + 50, 180, 270), height: 62 };
+      return { width: clamp(labelLen * 9 + 70, 200, 300), height: 66 };
     case 'ERROR':
-      return { width: clamp(labelLen * 9 + 60, 200, 290), height: 72 };
+      return { width: clamp(labelLen * 9 + 80, 220, 320), height: 80 };
     case 'FILE':
-      return { width: 240, height: 88 };
+      return { width: 260, height: 92 };
     default:
-      return { width: clamp(labelLen * 9 + 60, 200, 320), height: 74 };
+      // PROCESS
+      return { width: clamp(labelLen * 9 + 80, 240, 360), height: 84 };
   }
 }
 
@@ -136,10 +138,10 @@ export function layoutControlFlowGraph(
   const sortedLevels = Array.from(levelGroups.keys()).sort((a, b) => a - b);
 
   // ── Vertical / horizontal spacing constants ─────────────────────────────────
-  const H_GAP = 80;   // horizontal gap between sibling nodes on the same row
-  const V_GAP = 130;  // vertical gap between rows
-  const START_Y = 60;
-  const CENTER_X = 500; // reference centre X for the canvas
+  const H_GAP = 100;   // horizontal gap between sibling nodes
+  const V_GAP = 160;   // vertical gap between rows — larger for readability
+  const START_Y = 80;
+  const CENTER_X = 600; // reference centre X for the canvas
 
   // ── Position nodes ──────────────────────────────────────────────────────────
   sortedLevels.forEach(lvl => {

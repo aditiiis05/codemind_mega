@@ -235,21 +235,24 @@ const FlowchartCanvasInner = (
   // Determine edge color and marker based on edge label/type
   const getEdgeStyle = (edge: FlowEdgeType) => {
     if (edge.label === 'YES' || edge.type === 'YES') {
-      return { color: '#34d399', marker: 'url(#arrow-yes)', strokeWidth: 2.2, dash: undefined };
+      return { color: '#34d399', marker: 'url(#arrow-yes)',     strokeWidth: 2.5,  dash: undefined };
     }
     if (edge.label === 'NO' || edge.type === 'NO') {
-      return { color: '#f87171', marker: 'url(#arrow-no)', strokeWidth: 2.2, dash: undefined };
+      return { color: '#f87171', marker: 'url(#arrow-no)',      strokeWidth: 2.5,  dash: undefined };
     }
     if (edge.label === 'CALLS' || edge.type === 'CALLS') {
-      return { color: '#c084fc', marker: 'url(#arrow-calls)', strokeWidth: 2, dash: '5,4' };
+      return { color: '#c084fc', marker: 'url(#arrow-calls)',   strokeWidth: 2.2,  dash: '6,4' };
     }
     if (edge.label === 'IMPORTS' || edge.type === 'IMPORTS') {
-      return { color: '#22d3ee', marker: 'url(#arrow-imports)', strokeWidth: 2, dash: undefined };
+      return { color: '#22d3ee', marker: 'url(#arrow-imports)', strokeWidth: 2.2,  dash: undefined };
     }
     if (edge.label === 'LOOP' || edge.type === 'LOOP') {
-      return { color: '#818cf8', marker: 'url(#arrow-loop)', strokeWidth: 2, dash: '4,3' };
+      return { color: '#818cf8', marker: 'url(#arrow-loop)',    strokeWidth: 2.2,  dash: '5,4' };
     }
-    return { color: '#475569', marker: 'url(#arrow-default)', strokeWidth: 1.8, dash: undefined };
+    if (edge.label === 'RETURN' || edge.type === 'RETURN') {
+      return { color: '#4ade80', marker: 'url(#arrow-default)', strokeWidth: 2.0,  dash: '4,3' };
+    }
+    return { color: '#4b5563',   marker: 'url(#arrow-default)', strokeWidth: 2.0,  dash: undefined };
   };
 
   // Search match evaluator
@@ -393,23 +396,23 @@ const FlowchartCanvasInner = (
                 {edge.label && (
                   <g transform={`translate(${edgeCalc.midX}, ${edgeCalc.midY})`}>
                     <rect
-                      x={-24}
-                      y={-10}
-                      width={48}
-                      height={20}
-                      rx={4}
+                      x={-28}
+                      y={-12}
+                      width={56}
+                      height={24}
+                      rx={5}
                       fill="#0d1117"
                       stroke={style.color}
-                      strokeWidth={1.2}
+                      strokeWidth={1.5}
                     />
                     <text
                       x={0}
-                      y={3.5}
+                      y={4}
                       textAnchor="middle"
                       fill={style.color}
-                      fontSize="9px"
+                      fontSize="11px"
                       fontWeight="bold"
-                      fontFamily="monospace"
+                      fontFamily="'Monaco','Menlo','monospace'"
                     >
                       {edge.label}
                     </text>

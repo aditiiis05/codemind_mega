@@ -27,6 +27,7 @@ import FlowToolbar from './FlowToolbar';
 import FlowFilters from './FlowFilters';
 import FlowLegend from './FlowLegend';
 import FlowchartCanvas, { FlowchartCanvasHandle } from './FlowchartCanvas';
+import NodeDetailPanel from './NodeDetailPanel';
 import ProjectGraph from './ProjectGraph';
 
 interface FlowchartPanelProps {
@@ -64,6 +65,8 @@ export default function FlowchartPanel({
   const [searchQuery, setSearchQuery] = useState('');
   const [zoom, setZoom] = useState(1.0);
   const [showMinimap, setShowMinimap] = useState(true);
+  // Detail level: 'overview' | 'standard' | 'detailed'
+  const [detailLevel, setDetailLevel] = useState<'overview' | 'standard' | 'detailed'>('standard');
 
   // Analysis and Data states
   const [isLoading, setIsLoading] = useState(false);
@@ -73,6 +76,8 @@ export default function FlowchartPanel({
 
   // Selection states
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [selectedNode, setSelectedNode] = useState<FlowNode | null>(null);
+  const [showDetailPanel, setShowDetailPanel] = useState(false);
   const [highlightedNodeId, setHighlightedNodeId] = useState<string | null>(null);
 
   // Debounce timer ref for auto-update
@@ -208,6 +213,8 @@ export default function FlowchartPanel({
    */
   const handleNodeClick = (node: FlowNode) => {
     setSelectedNodeId(node.id);
+    setSelectedNode(node);
+    setShowDetailPanel(true);
 
     const targetFile = node.file || fileName;
     if (targetFile && node.lineStart && onNavigateToCode) {
@@ -226,17 +233,35 @@ export default function FlowchartPanel({
     let nodesToLayout = fileGraphData.nodes;
     let edgesToLayout = fileGraphData.edges;
 
-    // Apply Filter
-    if (filter === 'DECISIONS') {
-      nodesToLayout = nodesToLayout.filter(n => n.type === 'DECISION');
-    } else if (filter === 'LOOPS') {
-      nodesToLayout = nodesToLayout.filter(n => n.type === 'LOOP');
-    } else if (filter === 'FUNCTIONS') {
-      nodesToLayout = nodesToLayout.filter(n => n.type === 'FUNCTION');
+    // ── Detail level filtering ──────────────────────────────────────────────
+    // Overview: only structural nodes (START, END, FUNCTION, DECISION, LOOP)
+    // Standard: all except pure PROCESS nodes that are very minor (default)
+    // Detailed: everything
+    if (detailLevel === 'overview') {
+      const keepTypes = new Set(['START', 'END', 'FUNCTION', 'DECISION', 'LOOP', 'ERROR']);
+      nodesToLayout = nodesToLayout.filter(n => keepTypes.has(n.type));
+    }
+    // standard and detailed use all nodes
+
+    // ── Filter bar filtering ────────────────────────────────────────────────
+    if (filter !== 'ALL') {
+      if (filter === 'DECISIONS') {
+        nodesToLayout = nodesToLayout.filter(n => n.type === 'DECISION');
+      } else if (filter === 'LOOPS') {
+        nodesToLayout = nodesToLayout.filter(n => n.type === 'LOOP');
+      } else if (filter === 'FUNCTIONS') {
+        nodesToLayout = nodesToLayout.filter(n => n.type === 'FUNCTION');
+      }
     }
 
+    // Keep only edges where both source and target are still in the node set
+    const visibleIds = new Set(nodesToLayout.map(n => n.id));
+    edgesToLayout = edgesToLayout.filter(
+      e => visibleIds.has(e.source) && visibleIds.has(e.target)
+    );
+
     return layoutControlFlowGraph(nodesToLayout, edgesToLayout);
-  }, [fileGraphData, filter]);
+  }, [fileGraphData, filter, detailLevel]);
 
   /**
    * Counts for filter pills
@@ -308,6 +333,8 @@ export default function FlowchartPanel({
         }}
         isAnalyzing={isLoading}
         fileName={fileName}
+        detailLevel={detailLevel}
+        onDetailLevelChange={setDetailLevel}
       />
 
       {/* Filter Bar */}
@@ -379,19 +406,31 @@ export default function FlowchartPanel({
             </div>
           )
         ) : currentControlFlowLayout.nodes.length > 0 ? (
-          <FlowchartCanvas
-            ref={canvasRef}
-            nodes={currentControlFlowLayout.nodes}
-            edges={currentControlFlowLayout.edges}
-            bounds={currentControlFlowLayout.bounds}
-            zoom={zoom}
-            onZoomChange={setZoom}
-            selectedNodeId={selectedNodeId}
-            highlightedNodeId={highlightedNodeId}
-            searchQuery={searchQuery}
-            showMinimap={showMinimap}
-            onNodeClick={handleNodeClick}
-          />
+          <div className="relative w-full h-full">
+            <FlowchartCanvas
+              ref={canvasRef}
+              nodes={currentControlFlowLayout.nodes}
+              edges={currentControlFlowLayout.edges}
+              bounds={currentControlFlowLayout.bounds}
+              zoom={zoom}
+              onZoomChange={setZoom}
+              selectedNodeId={selectedNodeId}
+              highlightedNodeId={highlightedNodeId}
+              searchQuery={searchQuery}
+              showMinimap={showMinimap}
+              onNodeClick={handleNodeClick}
+            />
+            {/* Node detail panel — slides in from the right */}
+            {showDetailPanel && selectedNode && (
+              <NodeDetailPanel
+                node={selectedNode}
+                allEdges={currentControlFlowLayout.edges}
+                allNodes={currentControlFlowLayout.nodes}
+                onClose={() => setShowDetailPanel(false)}
+                onNavigateToCode={onNavigateToCode}
+              />
+            )}
+          </div>
         ) : (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-[#7d8590] p-6 text-center">
             <FileCode size={36} className="text-[#30363d] mb-3" />
