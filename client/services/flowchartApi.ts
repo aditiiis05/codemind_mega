@@ -4,7 +4,8 @@
 import axios from 'axios';
 import {
   FlowchartResponse,
-  ProjectGraphResponse
+  ProjectGraphResponse,
+  SelectionAnalysisParams
 } from '@/types/flowchart';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4000';
@@ -103,6 +104,35 @@ export async function analyzeProject(params: AnalyzeProjectParams): Promise<Proj
         ? 'Cannot reach backend server at ' + API_BASE_URL + '. Is server running on port 4000?'
         : err.message || 'Unable to analyze project graph. Please verify repository files.');
 
+    throw new Error(message);
+  }
+}
+
+/**
+ * Request selection-aware flowchart from the backend.
+ * POST /api/flowchart/analyze/selection
+ */
+export async function analyzeSelection(params: SelectionAnalysisParams): Promise<FlowchartResponse> {
+  const { code, language, startLine, endLine, detail = 'standard', filePath } = params;
+
+  try {
+    const response = await axios.post<FlowchartResponse>(
+      `${API_BASE_URL}/api/flowchart/analyze/selection`,
+      { code, language, startLine, endLine, detail, filePath: filePath || null },
+      { headers: { 'Content-Type': 'application/json' }, timeout: 15000 }
+    );
+
+    if (response.data && response.data.success) {
+      return response.data;
+    }
+    throw new Error(response.data?.error || 'Invalid response from selection analysis backend');
+  } catch (err: any) {
+    const message =
+      err.response?.data?.error ||
+      err.response?.data?.details ||
+      (err.code === 'ERR_NETWORK'
+        ? 'Cannot reach backend server at ' + API_BASE_URL + '. Is server running on port 4000?'
+        : err.message || 'Unable to analyze selection.');
     throw new Error(message);
   }
 }

@@ -29,6 +29,7 @@ type Props = {
   readOnly?: boolean;
   highlightRange?: { lineStart: number; lineEnd: number; source?: string } | null;
   onCursorChange?: (line: number) => void;
+  onSelectionChange?: (startLine: number, endLine: number) => void;
 };
 
 const CodeEditor = ({
@@ -38,7 +39,8 @@ const CodeEditor = ({
   onChange,
   readOnly = false,
   highlightRange = null,
-  onCursorChange
+  onCursorChange,
+  onSelectionChange
 }: Props) => {
   const [suggestion, setSuggestion] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -182,6 +184,14 @@ const CodeEditor = ({
     // Listen to cursor movement to inform parent / flowchart
     editor.onDidChangeCursorPosition((e: any) => {
       onCursorChange?.(e.position.lineNumber);
+    });
+
+    // Listen to selection change for multi-line range
+    editor.onDidChangeCursorSelection((e: any) => {
+      const sel = e.selection;
+      if (sel && onSelectionChange) {
+        onSelectionChange(sel.startLineNumber, sel.endLineNumber);
+      }
     });
     
     // Configure Monaco theme

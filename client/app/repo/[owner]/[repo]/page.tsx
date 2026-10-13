@@ -57,6 +57,7 @@ export default function RepoPage() {
   // Flowchart & Code Navigation States
   const [highlightRange, setHighlightRange] = useState<{ lineStart: number; lineEnd: number; source?: string } | null>(null);
   const [cursorLine, setCursorLine] = useState<number | null>(null);
+  const [cursorEndLine, setCursorEndLine] = useState<number | null>(null);
   const [rightPanelWidth, setRightPanelWidth] = useState<number>(540);
   const [activeRightTab, setActiveRightTab] = useState<'flowchart' | 'mindmap'>('flowchart');
 
@@ -316,6 +317,7 @@ export default function RepoPage() {
     // Set selected file immediately so the editor panel appears with a loading state
     setSelectedFile(file);
     setFileContent('// Loading...');
+    setCursorEndLine(null);
 
     try {
       setIsLoadingFile(true);
@@ -561,6 +563,7 @@ export default function RepoPage() {
                 readOnly={false}
                 highlightRange={highlightRange}
                 onCursorChange={(line) => setCursorLine(line)}
+                onSelectionChange={(start, end) => { setCursorLine(start); setCursorEndLine(end); }}
               />
             ) : (
               <div className="flex items-center justify-center h-full text-center flex-col opacity-50">
@@ -637,6 +640,7 @@ export default function RepoPage() {
                   owner={owner}
                   repo={repo}
                   cursorLine={cursorLine}
+                  cursorEndLine={cursorEndLine}
                   onNavigateToCode={handleNavigateToCode}
                 />
               ) : (

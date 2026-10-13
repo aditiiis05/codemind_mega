@@ -100,3 +100,12 @@ export interface CodeHighlightRange {
   lineEnd: number;
   source?: string;
 }
+
+export interface SelectionAnalysisParams {
+  code: string;
+  language: string;
+  startLine: number;
+  endLine: number;
+  detail?: string;
+  filePath?: string;
+}

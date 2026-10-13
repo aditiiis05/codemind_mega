@@ -21,7 +21,7 @@ import {
   FlowchartResponse,
   ProjectGraphResponse
 } from '@/types/flowchart';
-import { analyzeFile, analyzeProject } from '@/services/flowchartApi';
+import { analyzeFile, analyzeProject, analyzeSelection } from '@/services/flowchartApi';
 import { layoutControlFlowGraph } from './flowLayout';
 import FlowToolbar from './FlowToolbar';
 import FlowFilters from './FlowFilters';
@@ -44,6 +44,7 @@ interface FlowchartPanelProps {
   owner?: string;
   repo?: string;
   cursorLine?: number | null;
+  cursorEndLine?: number | null;
   onNavigateToCode?: (file: string, lineStart: number, lineEnd?: number) => void;
 }
 
@@ -55,6 +56,7 @@ export default function FlowchartPanel({
   owner = '',
   repo = '',
   cursorLine = null,
+  cursorEndLine = null,
   onNavigateToCode
 }: FlowchartPanelProps) {
   // View states
@@ -73,6 +75,12 @@ export default function FlowchartPanel({
   const [error, setError] = useState<string | null>(null);
   const [fileGraphData, setFileGraphData] = useState<FlowchartResponse | null>(null);
   const [projectGraphData, setProjectGraphData] = useState<ProjectGraphResponse | null>(null);
+
+  // Selection mode states
+  const [selectionFlowData, setSelectionFlowData] = useState<FlowchartResponse | null>(null);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [isSelectionLoading, setIsSelectionLoading] = useState(false);
+  const selectionDebounceRef = useRef<NodeJS.Timeout | null>(null);
 
   // Selection states
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
@@ -208,6 +216,56 @@ export default function FlowchartPanel({
   }, [cursorLine, fileGraphData?.nodes]);
 
   /**
+   * Reset selection mode whenever the loaded file changes
+   */
+  useEffect(() => {
+    setIsSelectionMode(false);
+    setSelectionFlowData(null);
+  }, [code, fileName]);
+
+  /**
+   * Debounced selection fetch: when cursor moves on a non-blank line,
+   * call analyzeSelection and switch to selection mode.
+   */
+  useEffect(() => {
+    if (cursorLine === null || !code || !language || !fileName) return;
+    if (viewMode === 'project') return;
+
+    // Skip blank lines
+    const lines = code.split('\n');
+    const lineContent = lines[cursorLine - 1];
+    if (lineContent === undefined || lineContent.trim() === '') return;
+
+    // Debounce
+    if (selectionDebounceRef.current) clearTimeout(selectionDebounceRef.current);
+    selectionDebounceRef.current = setTimeout(async () => {
+      setIsSelectionLoading(true);
+      try {
+        const response = await analyzeSelection({
+          code,
+          language,
+          startLine: cursorLine - 1,
+          endLine: (cursorEndLine ?? cursorLine) - 1,
+          detail: detailLevel,
+          filePath: fileName
+        });
+        if (response.nodes.length > 0) {
+          setSelectionFlowData(response);
+          setIsSelectionMode(true);
+        }
+      } catch {
+        // Silently fall back to file graph — do not show error
+      } finally {
+        setIsSelectionLoading(false);
+      }
+    }, 400);
+
+    return () => {
+      if (selectionDebounceRef.current) clearTimeout(selectionDebounceRef.current);
+    };
+  }, [cursorLine, cursorEndLine, code, fileName, language, detailLevel, viewMode]);
+
+  /**
    * Flowchart to Code interaction:
    * When user clicks a flowchart node, navigate Monaco editor to lineStart!
    */
@@ -226,12 +284,14 @@ export default function FlowchartPanel({
    * Compute layout for current File / Function flow nodes
    */
   const currentControlFlowLayout = useMemo(() => {
-    if (!fileGraphData?.nodes) {
+    const activeGraphData = (isSelectionMode && selectionFlowData) ? selectionFlowData : fileGraphData;
+
+    if (!activeGraphData?.nodes) {
       return { nodes: [], edges: [], bounds: { minX: 0, minY: 0, maxX: 600, maxY: 400, width: 600, height: 400 } };
     }
 
-    let nodesToLayout = fileGraphData.nodes;
-    let edgesToLayout = fileGraphData.edges;
+    let nodesToLayout = activeGraphData.nodes;
+    let edgesToLayout = activeGraphData.edges;
 
     // ── Detail level filtering ──────────────────────────────────────────────
     // Overview: only structural nodes (START, END, FUNCTION, DECISION, LOOP)
@@ -261,7 +321,7 @@ export default function FlowchartPanel({
     );
 
     return layoutControlFlowGraph(nodesToLayout, edgesToLayout);
-  }, [fileGraphData, filter, detailLevel]);
+  }, [fileGraphData, filter, detailLevel, isSelectionMode, selectionFlowData]);
 
   /**
    * Counts for filter pills
@@ -279,7 +339,8 @@ export default function FlowchartPanel({
       };
     }
 
-    const nodes = fileGraphData?.nodes || [];
+    const activeGraphData = (isSelectionMode && selectionFlowData) ? selectionFlowData : fileGraphData;
+    const nodes = activeGraphData?.nodes || [];
     return {
       all: nodes.length,
       decisions: nodes.filter(n => n.type === 'DECISION').length,
@@ -287,7 +348,7 @@ export default function FlowchartPanel({
       functions: nodes.filter(n => n.type === 'FUNCTION').length,
       calls: nodes.filter(n => (n as any).isCall).length
     };
-  }, [viewMode, fileGraphData, projectGraphData]);
+  }, [viewMode, fileGraphData, projectGraphData, isSelectionMode, selectionFlowData]);
 
   // Canvas ref for fit-to-screen
   const canvasRef = useRef<FlowchartCanvasHandle>(null);
@@ -407,6 +468,25 @@ export default function FlowchartPanel({
           )
         ) : currentControlFlowLayout.nodes.length > 0 ? (
           <div className="relative w-full h-full">
+            {/* Selection mode badge */}
+            {isSelectionMode && (
+              <div className="absolute top-2 left-2 z-20 flex items-center gap-1.5 bg-[#1f6feb]/20 border border-[#1f6feb]/40 text-[#58a6ff] text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                <span>Selection Mode</span>
+                <button
+                  onClick={() => { setIsSelectionMode(false); setSelectionFlowData(null); }}
+                  className="hover:text-white transition-colors"
+                  aria-label="Exit selection mode"
+                >
+                  ×
+                </button>
+              </div>
+            )}
+            {/* Selection loading indicator (small spinner, non-blocking) */}
+            {isSelectionLoading && (
+              <div className="absolute top-2 right-2 z-20">
+                <Loader2 size={14} className="text-[#58a6ff] animate-spin" />
+              </div>
+            )}
             <FlowchartCanvas
               ref={canvasRef}
               nodes={currentControlFlowLayout.nodes}
