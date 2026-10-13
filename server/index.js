@@ -62,6 +62,7 @@ app.use((req, res) => {
       'GET /api/github/repo-content',
       'POST /api/github/repo-content',
       'POST /api/flowchart/analyze',
+      'POST /api/flowchart/analyze/selection',
       'POST /api/project/analyze',
       'POST /api/ai/complete',
       'POST /api/ai/analyze-repo',

@@ -1,9 +1,24 @@
 // server/analyzer/flow/flowGenerator.js
 // Translates Common Intermediate Representation (IR) into deterministic Flowchart Nodes and Edges
 
-const { createFlowNode, resetNodeCounter } = require('./flowNode');
+const { createFlowNode, resetNodeCounter, generateLabel } = require('./flowNode');
 const { createFlowEdge, resetEdgeCounter } = require('./flowEdge');
 const { IR_TYPES } = require('../ir/irTypes');
+
+/**
+ * Recursively counts the number of IR nodes in a sequence (for collapse threshold).
+ * @param {Array} ir
+ * @returns {number}
+ */
+function countIRNodes(ir = []) {
+  let n = ir.length;
+  for (const item of ir) {
+    if (item.body) n += countIRNodes(item.body);
+    if (item.trueBranch) n += countIRNodes(item.trueBranch);
+    if (item.falseBranch) n += countIRNodes(item.falseBranch);
+  }
+  return n;
+}
 
 /**
  * Generates flowchart graph from Common IR representation
@@ -12,13 +27,15 @@ const { IR_TYPES } = require('../ir/irTypes');
  * @param {string} options.fileName - Source file name
  * @param {string} [options.functionName] - Optional function to focus on
  * @param {Array<Object>} [options.functions] - Detected function definitions
+ * @param {string} [options.detail='standard'] - 'overview' | 'standard' | 'detailed'
  * @returns {{ nodes: Array, edges: Array }} Flowchart graph
  */
 function generateFlowchartFromIR({
   irNodes = [],
   fileName = 'main.py',
   functionName = null,
-  functions = []
+  functions = [],
+  detail = 'standard'
 }) {
   resetNodeCounter();
   resetEdgeCounter();
@@ -48,6 +65,7 @@ function generateFlowchartFromIR({
       id: 'start',
       type: 'start',
       label: startLabel,
+      code: '',
       file: fileName,
       lineStart: 1,
       lineEnd: 1
@@ -57,6 +75,7 @@ function generateFlowchartFromIR({
       id: 'node_empty',
       type: 'process',
       label: 'Empty file / No execution statements',
+      code: '',
       file: fileName,
       lineStart: 1,
       lineEnd: 1
@@ -66,6 +85,7 @@ function generateFlowchartFromIR({
       id: 'end',
       type: 'end',
       label: 'END',
+      code: '',
       file: fileName,
       lineStart: 1,
       lineEnd: 1
@@ -85,17 +105,19 @@ function generateFlowchartFromIR({
     id: 'start',
     type: 'start',
     label: startLabel,
+    code: '',
     file: fileName,
     lineStart: firstLine,
     lineEnd: firstLine
   });
   nodes.push(startNode);
 
-  // 2. Create END node
+  // 2. Create END node (pushed at the end)
   const endNode = createFlowNode({
     id: 'end',
     type: 'end',
     label: 'END',
+    code: '',
     file: fileName,
     lineStart: lastLine,
     lineEnd: lastLine
@@ -118,137 +140,173 @@ function generateFlowchartFromIR({
       switch (item.type) {
         // --- PROCESS / STATEMENT ---
         case IR_TYPES.PROCESS: {
+          // In overview mode, skip PROCESS entirely
+          if (detail === 'overview') break;
+
+          if (detail === 'standard') {
+            // Collect consecutive PROCESS items starting at idx
+            const run = [item];
+            while (
+              idx + run.length < sequence.length &&
+              sequence[idx + run.length]?.type === IR_TYPES.PROCESS
+            ) {
+              run.push(sequence[idx + run.length]);
+            }
+
+            if (run.length >= 2) {
+              // Emit one merged node
+              const label = `Statements (${run.length})`;
+              const rawCode = run[0].label || '';
+              const procNode = createFlowNode({
+                type: 'process',
+                label,
+                code: rawCode,
+                file: fileName,
+                lineStart: run[0].lineStart,
+                lineEnd: run[run.length - 1].lineEnd
+              });
+              nodes.push(procNode);
+              currentIncoming.forEach(inc =>
+                edges.push(createFlowEdge({ source: inc.id, target: procNode.id, label: inc.label || null }))
+              );
+              currentIncoming = [{ id: procNode.id }];
+              idx += run.length - 1; // compensate; loop will +1
+              break;
+            }
+            // Single PROCESS in standard — fall through to emit normally
+          }
+
+          // detailed mode OR single PROCESS in standard
+          const rawCode = item.label || '';
           const procNode = createFlowNode({
             type: 'process',
-            label: item.label,
+            label: generateLabel('PROCESS', rawCode),
+            code: rawCode,
             file: fileName,
             lineStart: item.lineStart,
             lineEnd: item.lineEnd
           });
           nodes.push(procNode);
-
-          currentIncoming.forEach(inc => {
-            edges.push(createFlowEdge({
-              source: inc.id,
-              target: procNode.id,
-              label: inc.label || null
-            }));
-          });
-
+          currentIncoming.forEach(inc =>
+            edges.push(createFlowEdge({ source: inc.id, target: procNode.id, label: inc.label || null }))
+          );
           currentIncoming = [{ id: procNode.id }];
           break;
         }
 
         // --- INPUT ---
         case IR_TYPES.INPUT: {
+          if (detail === 'overview') break;
+
+          const rawExpr = item.expression || item.label || '';
           const inNode = createFlowNode({
             type: 'input',
-            label: item.expression,
+            label: generateLabel('INPUT', rawExpr),
+            code: rawExpr,
             file: fileName,
             lineStart: item.lineStart,
             lineEnd: item.lineEnd
           });
           nodes.push(inNode);
-
-          currentIncoming.forEach(inc => {
-            edges.push(createFlowEdge({
-              source: inc.id,
-              target: inNode.id,
-              label: inc.label || null
-            }));
-          });
-
+          currentIncoming.forEach(inc =>
+            edges.push(createFlowEdge({ source: inc.id, target: inNode.id, label: inc.label || null }))
+          );
           currentIncoming = [{ id: inNode.id }];
           break;
         }
 
         // --- OUTPUT ---
         case IR_TYPES.OUTPUT: {
+          if (detail === 'overview') break;
+
+          const rawExpr = item.expression || item.label || '';
           const outNode = createFlowNode({
             type: 'output',
-            label: item.expression,
+            label: generateLabel('OUTPUT', rawExpr),
+            code: rawExpr,
             file: fileName,
             lineStart: item.lineStart,
             lineEnd: item.lineEnd
           });
           nodes.push(outNode);
-
-          currentIncoming.forEach(inc => {
-            edges.push(createFlowEdge({
-              source: inc.id,
-              target: outNode.id,
-              label: inc.label || null
-            }));
-          });
-
+          currentIncoming.forEach(inc =>
+            edges.push(createFlowEdge({ source: inc.id, target: outNode.id, label: inc.label || null }))
+          );
           currentIncoming = [{ id: outNode.id }];
           break;
         }
 
         // --- FUNCTION CALL ---
         case IR_TYPES.FUNCTION_CALL: {
+          if (detail === 'overview') break;
+
+          const rawLabel = item.label || '';
           const callNode = createFlowNode({
             type: 'function',
-            label: item.label,
+            label: generateLabel('FUNCTION_CALL', rawLabel),
+            code: rawLabel,
             file: fileName,
             lineStart: item.lineStart,
             lineEnd: item.lineEnd
           });
           nodes.push(callNode);
-
-          currentIncoming.forEach(inc => {
-            edges.push(createFlowEdge({
-              source: inc.id,
-              target: callNode.id,
-              label: inc.label || 'CALLS'
-            }));
-          });
-
+          currentIncoming.forEach(inc =>
+            edges.push(createFlowEdge({ source: inc.id, target: callNode.id, label: inc.label || 'CALLS' }))
+          );
           currentIncoming = [{ id: callNode.id }];
           break;
         }
 
         // --- FUNCTION DEFINITION ---
         case IR_TYPES.FUNCTION_DEF: {
+          const funcLabel = `${item.name}(${(item.params || []).join(', ')})`;
           const funcDefNode = createFlowNode({
             type: 'function',
-            label: `${item.name}(${item.params.join(', ')})`,
+            label: generateLabel('FUNCTION_DEF', funcLabel),
+            code: funcLabel,
             file: fileName,
             lineStart: item.lineStart,
             lineEnd: item.lineEnd
           });
           nodes.push(funcDefNode);
-
-          currentIncoming.forEach(inc => {
-            edges.push(createFlowEdge({
-              source: inc.id,
-              target: funcDefNode.id,
-              label: inc.label || null
-            }));
-          });
-
+          currentIncoming.forEach(inc =>
+            edges.push(createFlowEdge({ source: inc.id, target: funcDefNode.id, label: inc.label || null }))
+          );
           currentIncoming = [{ id: funcDefNode.id }];
+
+          // In overview mode: emit the def node only, don't recurse
+          if (detail === 'overview') break;
+
+          // Collapse if adding body would exceed 80 total nodes
+          const bodySize = countIRNodes(item.body || []);
+          if (nodes.length + bodySize > 80) {
+            // Collapsed — do not recurse
+            break;
+          }
+
+          // Recurse into body
+          if (Array.isArray(item.body) && item.body.length > 0) {
+            const bodyExits = translateSequence(item.body, [{ id: funcDefNode.id }], loopContext);
+            currentIncoming = bodyExits;
+          }
           break;
         }
 
         // --- DECISION (IF / ELSE IF / ELSE) ---
         case IR_TYPES.DECISION: {
+          const rawCond = item.condition || '';
           const decisionNode = createFlowNode({
             type: 'decision',
-            label: `${item.condition}?`,
+            label: generateLabel('DECISION', rawCond),
+            code: rawCond,
             file: fileName,
             lineStart: item.lineStart,
             lineEnd: item.lineEnd
           });
           nodes.push(decisionNode);
-
-          currentIncoming.forEach(inc => {
-            edges.push(createFlowEdge({
-              source: inc.id,
-              target: decisionNode.id,
-              label: inc.label || null
-            }));
-          });
+          currentIncoming.forEach(inc =>
+            edges.push(createFlowEdge({ source: inc.id, target: decisionNode.id, label: inc.label || null }))
+          );
 
           // Translate TRUE branch (YES)
           const trueExits = translateSequence(
@@ -266,11 +324,9 @@ function generateFlowchartFromIR({
               loopContext
             );
           } else {
-            // No else block: NO branch passes directly to downstream merge
             falseExits = [{ id: decisionNode.id, label: 'NO' }];
           }
 
-          // Next statement receives both branch exits
           currentIncoming = [...trueExits, ...falseExits];
           break;
         }
@@ -280,27 +336,26 @@ function generateFlowchartFromIR({
           if (item.loopType === 'for' && item.forInit) {
             // --- Decomposed FOR loop ---
             // 1. Init node
+            const initRaw = item.forInit || '';
             const initNode = createFlowNode({
               type: 'process',
-              label: item.forInit,
+              label: generateLabel('PROCESS', initRaw),
+              code: initRaw,
               file: fileName,
               lineStart: item.lineStart,
               lineEnd: item.lineStart
             });
             nodes.push(initNode);
-            currentIncoming.forEach(inc => {
-              edges.push(createFlowEdge({
-                source: inc.id,
-                target: initNode.id,
-                label: inc.label || null
-              }));
-            });
+            currentIncoming.forEach(inc =>
+              edges.push(createFlowEdge({ source: inc.id, target: initNode.id, label: inc.label || null }))
+            );
 
             // 2. Condition (loop) node
-            const loopCondLabel = item.forCond || item.condition;
+            const loopCondLabel = item.forCond || item.condition || '';
             const loopCondNode = createFlowNode({
               type: 'loop',
-              label: loopCondLabel,
+              label: generateLabel('LOOP', loopCondLabel),
+              code: loopCondLabel,
               file: fileName,
               lineStart: item.lineStart,
               lineEnd: item.lineEnd
@@ -308,62 +363,55 @@ function generateFlowchartFromIR({
             nodes.push(loopCondNode);
             edges.push(createFlowEdge({ source: initNode.id, target: loopCondNode.id }));
 
-            // Track break exits
             const breakExits = [];
             const currentLoopCtx = { loopNodeId: loopCondNode.id, breakExits };
 
-            // 3. Body nodes
             const bodyExits = translateSequence(
               item.body || [],
               [{ id: loopCondNode.id, label: 'YES' }],
               currentLoopCtx
             );
 
-            // 4. Update node at end of body
             if (item.forUpdate) {
+              const updateRaw = item.forUpdate || '';
               const updateNode = createFlowNode({
                 type: 'process',
-                label: item.forUpdate,
+                label: generateLabel('PROCESS', updateRaw),
+                code: updateRaw,
                 file: fileName,
                 lineStart: item.lineEnd,
                 lineEnd: item.lineEnd
               });
               nodes.push(updateNode);
-              bodyExits.forEach(bExit => {
-                edges.push(createFlowEdge({ source: bExit.id, target: updateNode.id, label: bExit.label || null }));
-              });
-              // Loop update back to condition
+              bodyExits.forEach(bExit =>
+                edges.push(createFlowEdge({ source: bExit.id, target: updateNode.id, label: bExit.label || null }))
+              );
               edges.push(createFlowEdge({ source: updateNode.id, target: loopCondNode.id, label: 'LOOP', type: 'LOOP' }));
             } else {
-              // No update: loop body exits back to condition directly
-              bodyExits.forEach(bExit => {
-                edges.push(createFlowEdge({ source: bExit.id, target: loopCondNode.id, label: 'LOOP', type: 'LOOP' }));
-              });
+              bodyExits.forEach(bExit =>
+                edges.push(createFlowEdge({ source: bExit.id, target: loopCondNode.id, label: 'LOOP', type: 'LOOP' }))
+              );
             }
 
-            // Exit from condition (NO) goes downstream
             currentIncoming = [
               { id: loopCondNode.id, label: 'NO' },
               ...breakExits
             ];
           } else {
             // --- WHILE / DO_WHILE ---
+            const loopCond = item.condition || '';
             const loopNode = createFlowNode({
               type: 'loop',
-              label: item.condition,
+              label: generateLabel('LOOP', loopCond),
+              code: loopCond,
               file: fileName,
               lineStart: item.lineStart,
               lineEnd: item.lineEnd
             });
             nodes.push(loopNode);
-
-            currentIncoming.forEach(inc => {
-              edges.push(createFlowEdge({
-                source: inc.id,
-                target: loopNode.id,
-                label: inc.label || null
-              }));
-            });
+            currentIncoming.forEach(inc =>
+              edges.push(createFlowEdge({ source: inc.id, target: loopNode.id, label: inc.label || null }))
+            );
 
             const breakExits = [];
             const currentLoopCtx = { loopNodeId: loopNode.id, breakExits };
@@ -374,14 +422,9 @@ function generateFlowchartFromIR({
               currentLoopCtx
             );
 
-            bodyExits.forEach(bExit => {
-              edges.push(createFlowEdge({
-                source: bExit.id,
-                target: loopNode.id,
-                label: 'LOOP',
-                type: 'LOOP'
-              }));
-            });
+            bodyExits.forEach(bExit =>
+              edges.push(createFlowEdge({ source: bExit.id, target: loopNode.id, label: 'LOOP', type: 'LOOP' }))
+            );
 
             currentIncoming = [
               { id: loopNode.id, label: 'NO' },
@@ -393,22 +436,20 @@ function generateFlowchartFromIR({
 
         // --- BREAK ---
         case IR_TYPES.BREAK: {
+          if (detail === 'overview') break;
+
           const breakNode = createFlowNode({
             type: 'process',
             label: 'break',
+            code: 'break',
             file: fileName,
             lineStart: item.lineStart,
             lineEnd: item.lineEnd
           });
           nodes.push(breakNode);
-
-          currentIncoming.forEach(inc => {
-            edges.push(createFlowEdge({
-              source: inc.id,
-              target: breakNode.id,
-              label: inc.label || null
-            }));
-          });
+          currentIncoming.forEach(inc =>
+            edges.push(createFlowEdge({ source: inc.id, target: breakNode.id, label: inc.label || null }))
+          );
 
           if (loopContext && loopContext.breakExits) {
             loopContext.breakExits.push({ id: breakNode.id });
@@ -419,22 +460,20 @@ function generateFlowchartFromIR({
 
         // --- CONTINUE ---
         case IR_TYPES.CONTINUE: {
+          if (detail === 'overview') break;
+
           const contNode = createFlowNode({
             type: 'process',
             label: 'continue',
+            code: 'continue',
             file: fileName,
             lineStart: item.lineStart,
             lineEnd: item.lineEnd
           });
           nodes.push(contNode);
-
-          currentIncoming.forEach(inc => {
-            edges.push(createFlowEdge({
-              source: inc.id,
-              target: contNode.id,
-              label: inc.label || null
-            }));
-          });
+          currentIncoming.forEach(inc =>
+            edges.push(createFlowEdge({ source: inc.id, target: contNode.id, label: inc.label || null }))
+          );
 
           if (loopContext && loopContext.loopNodeId) {
             edges.push(createFlowEdge({
@@ -450,24 +489,20 @@ function generateFlowchartFromIR({
 
         // --- RETURN ---
         case IR_TYPES.RETURN: {
+          const retVal = item.value || '';
           const returnNode = createFlowNode({
             type: 'return',
-            label: `return ${item.value || ''}`.trim(),
+            label: generateLabel('RETURN', `return ${retVal}`.trim()),
+            code: `return ${retVal}`.trim(),
             file: fileName,
             lineStart: item.lineStart,
             lineEnd: item.lineEnd
           });
           nodes.push(returnNode);
+          currentIncoming.forEach(inc =>
+            edges.push(createFlowEdge({ source: inc.id, target: returnNode.id, label: inc.label || null }))
+          );
 
-          currentIncoming.forEach(inc => {
-            edges.push(createFlowEdge({
-              source: inc.id,
-              target: returnNode.id,
-              label: inc.label || null
-            }));
-          });
-
-          // Route return directly to END
           edges.push(createFlowEdge({
             source: returnNode.id,
             target: 'end',
@@ -481,22 +516,19 @@ function generateFlowchartFromIR({
 
         // --- THROW / ERROR ---
         case IR_TYPES.THROW: {
+          const throwExpr = item.expression || '';
           const throwNode = createFlowNode({
             type: 'error',
-            label: `throw ${item.expression}`,
+            label: `throw ${throwExpr}`,
+            code: `throw ${throwExpr}`,
             file: fileName,
             lineStart: item.lineStart,
             lineEnd: item.lineEnd
           });
           nodes.push(throwNode);
-
-          currentIncoming.forEach(inc => {
-            edges.push(createFlowEdge({
-              source: inc.id,
-              target: throwNode.id,
-              label: inc.label || 'ERROR'
-            }));
-          });
+          currentIncoming.forEach(inc =>
+            edges.push(createFlowEdge({ source: inc.id, target: throwNode.id, label: inc.label || 'ERROR' }))
+          );
 
           edges.push(createFlowEdge({
             source: throwNode.id,
@@ -511,27 +543,22 @@ function generateFlowchartFromIR({
 
         // --- SWITCH / CASE ---
         case IR_TYPES.SWITCH: {
+          const switchDisc = item.discriminant || '';
           const switchNode = createFlowNode({
             type: 'decision',
-            label: `switch(${item.discriminant})`,
+            label: `switch(${switchDisc})`,
+            code: `switch(${switchDisc})`,
             file: fileName,
             lineStart: item.lineStart,
             lineEnd: item.lineEnd
           });
           nodes.push(switchNode);
-
-          currentIncoming.forEach(inc => {
-            edges.push(createFlowEdge({
-              source: inc.id,
-              target: switchNode.id,
-              label: inc.label || null
-            }));
-          });
+          currentIncoming.forEach(inc =>
+            edges.push(createFlowEdge({ source: inc.id, target: switchNode.id, label: inc.label || null }))
+          );
 
           const caseExits = [];
-
           (item.cases || []).forEach(caseItem => {
-            // Each case branch hangs off the switch decision node
             const caseExitsLocal = translateSequence(
               caseItem.body || [],
               [{ id: switchNode.id, label: caseItem.label }],
@@ -540,7 +567,6 @@ function generateFlowchartFromIR({
             caseExits.push(...caseExitsLocal);
           });
 
-          // If no default case, the switch can fall through directly
           const hasDefault = (item.cases || []).some(c => c.label === 'case default');
           if (!hasDefault) {
             caseExits.push({ id: switchNode.id, label: 'default' });
@@ -564,13 +590,13 @@ function generateFlowchartFromIR({
               const catchNode = createFlowNode({
                 type: 'error',
                 label: `catch (${cb.param})`,
+                code: `catch (${cb.param})`,
                 file: fileName,
                 lineStart: item.lineStart,
                 lineEnd: item.lineEnd
               });
               nodes.push(catchNode);
 
-              // Connect from try block on error
               edges.push(createFlowEdge({
                 source: tryExits[0]?.id || 'start',
                 target: catchNode.id,

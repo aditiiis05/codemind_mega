@@ -12,13 +12,15 @@ const { generateFlowchartFromIR } = require('./flow/flowGenerator');
  * @param {string} [options.language] - Optional language hint
  * @param {string} [options.fileName='main.py'] - Source file name
  * @param {string} [options.functionName=null] - Optional function to focus on
+ * @param {string} [options.detail='standard'] - 'overview' | 'standard' | 'detailed'
  * @returns {Object} Flowchart response
  */
 function analyzeCodeFlowchart({
   code = '',
   language: langHint = '',
   fileName = 'main.py',
-  functionName = null
+  functionName = null,
+  detail = 'standard'
 }) {
   if (typeof code !== 'string') {
     throw new Error('Invalid request: "code" must be a string.');
@@ -46,7 +48,8 @@ function analyzeCodeFlowchart({
     irNodes,
     fileName,
     functionName,
-    functions
+    functions,
+    detail
   });
 
   // 4. Compute Metadata
