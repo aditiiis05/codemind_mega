@@ -126,13 +126,14 @@ export async function analyzeSelection(params: SelectionAnalysisParams): Promise
       return response.data;
     }
     throw new Error(response.data?.error || 'Invalid response from selection analysis backend');
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const axiosErr = err as { response?: { data?: { error?: string; details?: string } }; code?: string; message?: string };
     const message =
-      err.response?.data?.error ||
-      err.response?.data?.details ||
-      (err.code === 'ERR_NETWORK'
+      axiosErr.response?.data?.error ||
+      axiosErr.response?.data?.details ||
+      (axiosErr.code === 'ERR_NETWORK'
         ? 'Cannot reach backend server at ' + API_BASE_URL + '. Is server running on port 4000?'
-        : err.message || 'Unable to analyze selection.');
+        : axiosErr.message || 'Unable to analyze selection.');
     throw new Error(message);
   }
 }

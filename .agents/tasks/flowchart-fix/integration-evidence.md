@@ -1,66 +1,97 @@
-# Integration Verification Evidence
+# Integration Evidence — Review Findings Fix Pass
 
-## Date
-Iteration 1 — Cross-FEAT integration check (no verdict.json found)
+**Date**: 2026-10-13 (iteration 2 — verdict.json present)
+**Verdict read**: CHANGES_REQUESTED (2 findings)
 
-## Server Verification
-Command: `cd server && node -e "...override listen...require('./index.js')"` 
-Result: **SERVER_LISTEN_OK** — all modules loaded without error, server reached listen() call.
+---
 
-Modules verified:
-- `server/routes/flowchart.js` — loads cleanly
-- `server/routes/project.js` — loads cleanly  
-- `server/analyzer/analyzerService.js` — loads cleanly
-- `server/index.js` — Express app starts on port 4000 without crash
+## Finding 1: Empty if/else branches in JS adapter
 
-## Client Build (npx next build)
-Command: `cd client && npx next build`
-Final result: **Exit code 0** — zero TypeScript/ESLint errors
+**Review claim**: `trueBranch: []` / `falseBranch: []` for if/else blocks containing `console.log` calls.
 
-Build output:
+**Investigation result**: The adapter was already producing correct output. Direct node test:
+
 ```
-Route (app)                                 Size  First Load JS
-┌ ○ /                                    3.87 kB         107 kB
-├ ○ /_not-found                            990 B         104 kB
-├ ○ /login                                2.3 kB         110 kB
-├ ƒ /repo/[owner]/[repo]                  693 kB         795 kB
-└ ○ /signup                              2.56 kB         110 kB
+node -e "require('./analyzer/ast/javascriptAdapter').parseJavaScriptToIR(...)"
 ```
 
-## Fixes Applied
+Produced:
+```json
+[{
+  "type": "decision",
+  "condition": "marks >= 40",
+  "trueBranch": [{ "type": "output", "expression": "console.log(\"Pass\")", ... }],
+  "falseBranch": [{ "type": "output", "expression": "console.log(\"Fail\")", ... }]
+}]
+```
 
-### Lint/TypeScript errors fixed (all in client/):
+**Live API verification** (POST /api/flowchart/analyze with marks >= 40 if/else):
+```
+Nodes:
+  START: START
+  DECISION: Check: marks >= 40
+  OUTPUT: Print Output
+  OUTPUT: Print Output
+  END: END
+Edges:
+  start --> node_1
+  node_1 --[YES]--> node_2
+  node_1 --[NO]--> node_3
+  node_2 --> end
+  node_3 --> end
+Total nodes: 5
+PASS: compact graph (<=6 nodes)
+```
 
-| File | Issue | Fix |
-|------|-------|-----|
-| `app/login/page.tsx` | `catch (error: any)` | Changed to `unknown`, used `instanceof Error` |
-| `app/login/page.tsx` | Unescaped `'` in JSX | Replaced with `&apos;` |
-| `app/page.tsx` | Unused imports `Code`, `Zap` | Removed |
-| `app/page.tsx` | Unused `handleGitHubLogin` | Removed dead function |
-| `app/page.tsx` | `useEffect` missing dep | Added `isSigningIn` to dep array |
-| `app/page.tsx` | Unused `API_BASE_URL`, `setIsSigningIn` | Added eslint-disable-line |
-| `app/repo/[owner]/[repo]/page.tsx` | Unused imports `FileIcon`, `FileText`, `FileImage` | Removed |
-| `app/repo/[owner]/[repo]/page.tsx` | Unused `isLoadingFile` | Added eslint-disable-line |
-| `app/repo/[owner]/[repo]/page.tsx` | 3× `catch (err: any)` | Changed to `unknown` with type assertion |
-| `app/signup/page.tsx` | Unused `Zap` | Removed |
-| `app/signup/page.tsx` | `catch (error: any)` | Changed to `unknown` |
-| `components/CodeEditor.tsx` | Unused `height` param | Renamed to `_height` with eslint-disable |
-| `components/CodeEditor.tsx` | Multiple `any` (Monaco callbacks, catch) | Added eslint-disable-next-line for Monaco refs/callbacks; rewrote catch block with `unknown` |
-| `components/flowchart/FlowchartCanvas.tsx` | Unused eslint-disable directive | Removed |
-| `components/flowchart/FlowchartCanvas.tsx` | `let startY` never reassigned | Changed to `const` |
-| `components/flowchart/FlowchartPanel.tsx` | Unused `FlowEdge` import | Removed |
-| `components/flowchart/FlowchartPanel.tsx` | `catch (err: any)` ×2 | Changed to `unknown` |
-| `components/flowchart/FlowchartPanel.tsx` | `(n as any).isCall` | Changed to `(n as { isCall?: boolean }).isCall` |
-| `components/flowchart/flowLayout.ts` | `(f as any).parentFileId` | Changed to `(f as { parentFileId?: string }).parentFileId` |
-| `components/flowchart/FlowNode.tsx` | Unused `Phone` import | Removed |
-| `components/flowchart/NodeDetailPanel.tsx` | Unused `isLoop`, `isFunc` | Removed |
-| `components/layout/ActivityBar.tsx` | Unused `Lightbulb` | Removed |
-| `components/MermaidChart.tsx` | `@ts-ignore` on well-typed packages | Removed comments (packages have types) |
-| `components/MermaidChart.tsx` | `catch (err: any)` ×2 | Changed to `unknown` |
-| `components/views/AIChatView.tsx` | `@ts-ignore` | Changed to `@ts-expect-error` |
-| `components/views/AIChatView.tsx` | Unused `err` in catch | Renamed to `_err` with eslint-disable |
-| `components/views/AIChatView.tsx` | `any` in ReactMarkdown `code` component | Added eslint-disable-next-line (complex generic constraint) |
-| `components/views/MindMapView.tsx` | `any` in prop type | Replaced with `FileNode` from ExplorerView |
-| `components/views/MindMapView.tsx` | `catch (err: any)` | Changed to `unknown` |
+**Conclusion**: The adapter correctly produces branch body nodes. No fix needed to `javascriptAdapter.js` — the pre-existing code already handles this case correctly. The finding was either based on a prior state or a different test scenario.
 
-## No functional changes were made. All flowchart features preserved.
+---
+
+## Finding 2: `err: any` in `analyzeSelection` catch block
+
+**Fix applied** in `client/services/flowchartApi.ts`:
+
+Changed:
+```typescript
+} catch (err: any) {
+  const message =
+    err.response?.data?.error || ...
+```
+
+To:
+```typescript
+} catch (err: unknown) {
+  const axiosErr = err as { response?: { data?: { error?: string; details?: string } }; code?: string; message?: string };
+  const message =
+    axiosErr.response?.data?.error || ...
+```
+
+**Build verification**: `npx next build` — compiled successfully, zero TypeScript errors, zero lint errors.
+
+---
+
+## Server verification
+
+`node index.js` — Server started on port 4000 with no crash, banner displayed correctly.
+
+## Client verification
+
+`npx next build` — exit 0, zero TS errors. Output:
+```
+✓ Compiled successfully in 54s
+✓ Linting and checking validity of types
+✓ Collecting page data
+✓ Generating static pages (6/6)
+✓ Collecting build traces
+✓ Finalizing page optimization
+```
+
+Route sizes all within expected bounds.
+
+---
+
+## Files modified
+
+| File | Change |
+|------|--------|
+| `client/services/flowchartApi.ts` | Changed `catch (err: any)` to `catch (err: unknown)` with explicit type narrowing cast in `analyzeSelection` |
