@@ -35,7 +35,7 @@ type Props = {
 const CodeEditor = ({
   code,
   language,
-  height = "70vh",
+  height: _height = "70vh", // eslint-disable-line @typescript-eslint/no-unused-vars
   onChange,
   readOnly = false,
   highlightRange = null,
@@ -82,36 +82,28 @@ const CodeEditor = ({
       } else {
         throw new Error('Invalid response from server');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("AI Suggestion Error:", err);
       let errorMessage = "Failed to get AI suggestions.";
 
-      if (err.code === 'ERR_NETWORK' || err.message === 'Network Error') {
+      if (err && typeof err === 'object' && 'code' in err && (err as { code: string }).code === 'ERR_NETWORK') {
         errorMessage = "⚠️ Cannot connect to AI service. Please ensure the server is running on port 4000.\n\nRun: cd server && npm start";
-      } else if (err.response) {
-        const { data, status } = err.response;
-        
-        // Handle 400 Bad Request specifically
+      } else if (err && typeof err === 'object' && 'response' in err) {
+        const axiosErr = err as { response?: { data?: { error?: string; message?: string; details?: string; suggestion?: string }; status?: number }; request?: unknown; code?: string; message?: string };
+        const { data, status } = axiosErr.response || {};
         if (status === 400) {
-          errorMessage = `⚠️ Bad Request: ${data.error || data.message || 'Invalid request format'}`;
-          if (data.details) {
-            errorMessage += `\n\nDetails: ${data.details}`;
-          }
+          errorMessage = `⚠️ Bad Request: ${data?.error || data?.message || 'Invalid request format'}`;
+          if (data?.details) errorMessage += `\n\nDetails: ${data.details}`;
         } else {
-          errorMessage = data.error || data.message || errorMessage;
-          if (data.details) {
-            errorMessage += `\n${data.details}`;
-          }
+          errorMessage = data?.error || data?.message || errorMessage;
+          if (data?.details) errorMessage += `\n${data.details}`;
         }
-        
-        if (data.suggestion) {
-          errorMessage += `\n\n💡 Tip: ${data.suggestion}`;
-        }
-      } else if (err.request) {
+        if (data?.suggestion) errorMessage += `\n\n💡 Tip: ${data.suggestion}`;
+      } else if (err && typeof err === 'object' && 'request' in err) {
         errorMessage = "⚠️ No response from AI service. Check if the server is running.";
-      } else if (err.code === 'ECONNABORTED') {
+      } else if (err && typeof err === 'object' && 'code' in err && (err as { code: string }).code === 'ECONNABORTED') {
         errorMessage = "⏱️ Request timed out. The AI service is taking too long.";
-      } else if (err.message) {
+      } else if (err instanceof Error) {
         errorMessage = err.message;
       }
 
@@ -135,7 +127,9 @@ const CodeEditor = ({
     setError("");
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const editorRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const monacoRef = useRef<any>(null);
   const decorationsRef = useRef<string[]>([]);
 
@@ -177,16 +171,19 @@ const CodeEditor = ({
     ]);
   }, [highlightRange]);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleEditorDidMount = (editor: any, monaco: any) => {
     editorRef.current = editor;
     monacoRef.current = monaco;
 
     // Listen to cursor movement to inform parent / flowchart
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     editor.onDidChangeCursorPosition((e: any) => {
       onCursorChange?.(e.position.lineNumber);
     });
 
     // Listen to selection change for multi-line range
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     editor.onDidChangeCursorSelection((e: any) => {
       const sel = e.selection;
       if (sel && onSelectionChange) {

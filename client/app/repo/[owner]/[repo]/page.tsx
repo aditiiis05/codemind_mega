@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import axios from 'axios';
-import { Code, File as FileIcon, FileText, FileImage, Sparkles, Loader2, AlertCircle, Network } from 'lucide-react';
+import { Code, Sparkles, Loader2, AlertCircle, Network } from 'lucide-react';
 import CodeEditor from '@/components/CodeEditor';
 import IDELayout from '@/components/layout/IDELayout';
 import MindMapView from '@/components/views/MindMapView'; // <--- IMPORTED VISUALIZER
@@ -50,7 +50,7 @@ export default function RepoPage() {
   const [dirContents, setDirContents] = useState<Record<string, GitHubFile[]>>({});
   const [selectedFile, setSelectedFile] = useState<GitHubFile | null>(null);
   const [fileContent, setFileContent] = useState('');
-  const [isLoadingFile, setIsLoadingFile] = useState(false);
+  const [isLoadingFile, setIsLoadingFile] = useState(false); // eslint-disable-line @typescript-eslint/no-unused-vars
   const [streamingAnalysis, setStreamingAnalysis] = useState('');
   const [visualizationTrigger, setVisualizationTrigger] = useState<{ type: 'flowchart' | 'mindmap' | null; timestamp?: number }>({ type: null });
 
@@ -240,10 +240,11 @@ export default function RepoPage() {
     : JSON.stringify(data.analysis, null, 2)
 );
 
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message ||
-        err.response?.data?.error ||
-        err.message ||
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string; error?: string }; status?: number }; message?: string };
+      const errorMessage = e.response?.data?.message ||
+        e.response?.data?.error ||
+        e.message ||
         'Failed to analyze repository';
       console.error('[Analysis Error]', errorMessage);
       setError(`Analysis failed: ${errorMessage}`);
@@ -295,12 +296,13 @@ export default function RepoPage() {
           return [...prev, ...newItems];
         });
       }
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || err.message || 'Failed to load repository content';
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string }; status?: number }; message?: string };
+      const errorMessage = e.response?.data?.message || e.message || 'Failed to load repository content';
       console.error('[Repo Error]', errorMessage);
       setError(`Error: ${errorMessage}`);
 
-      if (err.response?.status === 401) {
+      if (e.response?.status === 401) {
         localStorage.removeItem('github_token');
         router.push('/');
       }
@@ -349,9 +351,10 @@ export default function RepoPage() {
       } else {
         setFileContent('// Unable to decode file content');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } }; message?: string };
       console.error('[File Error]', err);
-      const errorMessage = err.response?.data?.message || err.message || 'Failed to load file content';
+      const errorMessage = e.response?.data?.message || e.message || 'Failed to load file content';
       setError(`Error: ${errorMessage}`);
       setFileContent(`// Error loading file: ${errorMessage}`);
     } finally {

@@ -15,8 +15,7 @@ import {
   ArrowUpFromLine,
   CornerDownLeft,
   AlertTriangle,
-  FileCode2,
-  Phone
+  FileCode2
 } from 'lucide-react';
 import { FlowNode as FlowNodeType } from '@/types/flowchart';
 

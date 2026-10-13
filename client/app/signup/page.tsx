@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Github, Brain, Code, Zap, Loader, ArrowRight, LogIn, Sparkles, GitBranch } from 'lucide-react';
+import { Github, Brain, Code, Loader, ArrowRight, LogIn, Sparkles, GitBranch } from 'lucide-react';
 import Link from 'next/link';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4000';
@@ -41,9 +41,9 @@ export default function SignupPage() {
 
       console.log('[Signup] Redirecting to GitHub OAuth...');
       window.location.href = data.url;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[Signup Error]', error);
-      setError(error.message || 'Failed to initiate GitHub signup. Please try again.');
+      setError(error instanceof Error ? error.message : 'Failed to initiate GitHub signup. Please try again.');
       setIsSigningUp(false);
     }
   };

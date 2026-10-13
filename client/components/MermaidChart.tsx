@@ -2,9 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import mermaid from 'mermaid';
-// @ts-ignore: optional runtime-only dependency without local type declarations
 import { Canvg } from 'canvg';
-// @ts-ignore: optional runtime-only dependency without local type declarations
 import { jsPDF } from 'jspdf';
 
 // Initialize Mermaid globally
@@ -310,9 +308,9 @@ export default function MermaidChart({ chart }: MermaidChartProps) {
         return;
       }
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Export error:', err);
-      alert(`Export failed: ${err.message}\n\nCheck console for details.`);
+      alert(`Export failed: ${err instanceof Error ? err.message : String(err)}\n\nCheck console for details.`);
       setExporting(null);
     }
   };
@@ -335,9 +333,9 @@ export default function MermaidChart({ chart }: MermaidChartProps) {
           const { svg } = await mermaid.render(id, chart);
           setSvgContent(svg);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Mermaid render error:', err);
-        setError(err.message || 'Failed to render diagram syntax.');
+        setError(err instanceof Error ? err.message : 'Failed to render diagram syntax.');
       }
     };
 

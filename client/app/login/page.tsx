@@ -41,9 +41,9 @@ export default function LoginPage() {
 
       console.log('[Login] Redirecting to GitHub OAuth...');
       window.location.href = data.url;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[Login Error]', error);
-      setError(error.message || 'Failed to initiate GitHub login. Please try again.');
+      setError(error instanceof Error ? error.message : 'Failed to initiate GitHub login. Please try again.');
       setIsSigningIn(false);
     }
   };
@@ -112,7 +112,7 @@ export default function LoginPage() {
           {/* Sign Up Link */}
           <div className="text-center">
             <p className="text-[#7d8590] text-sm">
-              Don't have an account?{' '}
+              Don&apos;t have an account?{' '}
               <Link 
                 href="/signup" 
                 className="text-[#2f81f7] hover:text-[#1f6feb] font-medium transition-colors inline-flex items-center gap-1"

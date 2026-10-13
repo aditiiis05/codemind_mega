@@ -14,7 +14,6 @@ import {
 } from 'lucide-react';
 import {
   FlowNode,
-  FlowEdge,
   FlowchartViewMode,
   GraphLevel,
   FlowFilter,
@@ -113,9 +112,9 @@ export default function FlowchartPanel({
         });
 
         setFileGraphData(response);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('[FlowchartPanel] Analyze error:', err);
-        setError(err.message || 'Unable to generate flowchart. Please check the source code.');
+        setError(err instanceof Error ? err.message : 'Unable to generate flowchart. Please check the source code.');
       } finally {
         setIsLoading(false);
       }
@@ -143,9 +142,9 @@ export default function FlowchartPanel({
       });
 
       setProjectGraphData(response);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[FlowchartPanel] Project analyze error:', err);
-      setError(err.message || 'Unable to analyze project graph. Please verify repository files.');
+      setError(err instanceof Error ? err.message : 'Unable to analyze project graph. Please verify repository files.');
     } finally {
       setIsLoading(false);
     }
@@ -346,7 +345,7 @@ export default function FlowchartPanel({
       decisions: nodes.filter(n => n.type === 'DECISION').length,
       loops: nodes.filter(n => n.type === 'LOOP').length,
       functions: nodes.filter(n => n.type === 'FUNCTION').length,
-      calls: nodes.filter(n => (n as any).isCall).length
+      calls: nodes.filter(n => (n as { isCall?: boolean }).isCall).length
     };
   }, [viewMode, fileGraphData, projectGraphData, isSelectionMode, selectionFlowData]);
 

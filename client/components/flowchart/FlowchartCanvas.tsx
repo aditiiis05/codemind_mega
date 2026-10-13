@@ -116,7 +116,6 @@ const FlowchartCanvasInner = (
     }
 
     return () => observer.disconnect();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nodes.length, fitGraph]);
 
   // Expose fitToScreen to parent via ref
@@ -206,7 +205,7 @@ const FlowchartCanvasInner = (
 
     // Normal top-down edge
     let startX = sX + sWidth / 2;
-    let startY = sY + sHeight;
+    const startY = sY + sHeight;
 
     // If source is DECISION, offset YES to left, NO to right
     if (sourceNode.type === 'DECISION') {

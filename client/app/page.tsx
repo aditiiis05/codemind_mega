@@ -3,9 +3,9 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Github, Code, Brain, Zap, Loader, Search, Star, GitFork, Eye } from 'lucide-react';
+import { Github, Brain, Loader, Search, Star, GitFork, Eye } from 'lucide-react';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4000'; // eslint-disable-line @typescript-eslint/no-unused-vars
 
 interface Repository {
   id: number;
@@ -26,7 +26,7 @@ export default function HomePage() {
   const router = useRouter();
   const [repos, setRepos] = useState<Repository[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isSigningIn, setIsSigningIn] = useState(false);
+  const [isSigningIn, setIsSigningIn] = useState(false); // eslint-disable-line @typescript-eslint/no-unused-vars
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState('');
@@ -58,7 +58,7 @@ export default function HomePage() {
       // and there's no token in the URL
       router.push('/login');
     }
-  }, [router]);
+  }, [router, isSigningIn]);
 
   const fetchUserRepos = async (token: string) => {
     try {
@@ -93,37 +93,6 @@ export default function HomePage() {
       setIsAuthenticated(false);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleGitHubLogin = async () => {
-    setIsSigningIn(true);
-    setError('');
-    try {
-      console.log('[Login] Requesting GitHub OAuth URL from backend...');
-      // FIXED: Correct endpoint to match backend route /api/github/auth/github-url
-      const response = await fetch(`${API_BASE_URL}/api/github/auth/github-url`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Backend returned status ${response.status}`);
-      }
-
-      const data = await response.json();
-      if (!data.url) {
-        throw new Error('No OAuth URL returned from backend');
-      }
-
-      console.log('[Login] Redirecting to GitHub OAuth...');
-      // Backend will redirect from GitHub back to http://localhost:4000/api/github/callback
-      // Then backend redirects to http://localhost:3000/?token=... or /auth-success?token=...
-      window.location.href = data.url;
-    } catch (error) {
-      console.error('[Login Error]', error);
-      setError(`Failed to initiate GitHub login. Please try again.`);
-      setIsSigningIn(false);
     }
   };
 

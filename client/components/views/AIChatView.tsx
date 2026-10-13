@@ -5,9 +5,9 @@ import { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-// @ts-ignore - react-syntax-highlighter does not provide types in this project
+// @ts-expect-error - react-syntax-highlighter does not provide types in this project
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-// @ts-ignore - style file does not provide types in this project
+// @ts-expect-error - style file does not provide types in this project
 import { oneDark } from "react-syntax-highlighter/dist/cjs/styles/prism";
 
 import axios from 'axios';
@@ -79,7 +79,7 @@ export default function AIChatView() {
 
       setMessages(prev => [...prev, assistantMessage]);
 
-    } catch (err) {
+    } catch (_err) { // eslint-disable-line @typescript-eslint/no-unused-vars
       setMessages(prev => [
         ...prev,
         {
@@ -174,6 +174,7 @@ export default function AIChatView() {
                 remarkPlugins={[remarkGfm]}
                 components={{
                   /* -------- FIXED MARKDOWN CODE BLOCKS -------- */
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   code({ inline, className, children, ...props }: any) {
                     const match = /language-(\w+)/.exec(className || "");
 

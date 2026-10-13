@@ -73,8 +73,6 @@ export default function NodeDetailPanel({
 
   // Extra details for specific node types
   const isDecision = node.type === 'DECISION';
-  const isLoop     = node.type === 'LOOP';
-  const isFunc     = node.type === 'FUNCTION';
 
   const yesBranch = outgoing.find(e => e.label === 'YES');
   const noBranch  = outgoing.find(e => e.label === 'NO');

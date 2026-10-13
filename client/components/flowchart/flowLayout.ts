@@ -244,7 +244,7 @@ export function layoutProjectGraph(
     curY += (fn.height ?? 88) + ROW_GAP;
 
     funcNodes
-      .filter(f => (f as any).parentFileId === fileNode.id || f.file === fileNode.file)
+      .filter(f => (f as { parentFileId?: string }).parentFileId === fileNode.id || f.file === fileNode.file)
       .forEach(f => {
         const fn2 = nodeMap.get(f.id)!;
         fn2.x = colX + 24; fn2.y = curY;

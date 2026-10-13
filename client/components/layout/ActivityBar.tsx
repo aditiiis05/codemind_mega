@@ -1,6 +1,6 @@
 'use client';
 
-import { FileText, Search, GitBranch, Lightbulb, Zap, Settings, MoreHorizontal, Network } from 'lucide-react';
+import { FileText, Search, GitBranch, Zap, Settings, MoreHorizontal, Network } from 'lucide-react';
 
 interface ActivityBarProps {
   activeView: string;
