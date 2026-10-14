@@ -12,6 +12,7 @@ import SearchView from '../views/SearchView';
 import GitView from '../views/GitView';
 import MindMapView from '../views/MindMapView';
 import SettingsView from '../views/SettingsView';
+import { FlowNode } from '@/types/flowchart';
 
 interface IDELayoutProps {
   children?: ReactNode;
@@ -41,6 +42,13 @@ interface IDELayoutProps {
   };
   // Allow requesting visualizations from the layout (forwarded into MindMapView)
   onGenerateVisualization?: (node: FileNode, type: 'flowchart' | 'mindmap') => void;
+  selectedFlowNode?: FlowNode | null;
+  code?: string | null;
+  fileName?: string | null;
+  language?: string | null;
+  sessionId?: string | null;
+  onClearSelectedNode?: () => void;
+  onNavigateToCode?: (file: string, lineStart: number, lineEnd?: number) => void;
 }
 
 export default function IDELayout({
@@ -56,7 +64,14 @@ export default function IDELayout({
   onTabClose = () => {},
   analysisPanel,
   statusBarProps = {},
-  onGenerateVisualization = () => {}
+  onGenerateVisualization = () => {},
+  selectedFlowNode = null,
+  code = '',
+  fileName = 'main.py',
+  language = 'python',
+  sessionId = null,
+  onClearSelectedNode = () => {},
+  onNavigateToCode
 }: IDELayoutProps) {
   const [activeView, setActiveView] = useState<string>('explorer');
   const [showSidebar, setShowSidebar] = useState(true);
@@ -213,7 +228,15 @@ export default function IDELayout({
             </div>
 
             <div className="flex-1 overflow-hidden">
-              <AIChatView />
+              <AIChatView
+                selectedNode={selectedFlowNode}
+                code={code}
+                fileName={fileName}
+                language={language}
+                sessionId={sessionId}
+                onClearSelectedNode={onClearSelectedNode}
+                onNavigateToCode={onNavigateToCode}
+              />
             </div>
           </div>
         )}

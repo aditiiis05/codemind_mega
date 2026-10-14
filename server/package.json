@@ -5,7 +5,8 @@
   "scripts": {
     "start": "node index.js",
     "dev": "node index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node test-flowchart.js && node test-project-analyzer.js && node test-tutor.js",
+    "test:tutor": "node test-tutor.js"
   },
   "keywords": [],
   "author": "",

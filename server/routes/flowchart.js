@@ -8,6 +8,7 @@ const { analyzeCodeFlowchart } = require('../analyzer/analyzerService');
 const { detectLanguage, isLanguageSupported } = require('../analyzer/languageDetector');
 const { parseToIR } = require('../analyzer/parserManager');
 const { generateFlowchartFromIR } = require('../analyzer/flow/flowGenerator');
+const { sessionManager } = require('../tutor/sessionManager');
 
 // ---------------------------------------------------------------------------
 // djb2 hash — used to key the parse cache by content fingerprint
@@ -131,8 +132,19 @@ router.post('/analyze', async (req, res) => {
     const normalizedNodes = normalizeNodes(result.nodes);
     const normalizedEdges = normalizeEdges(result.edges);
 
+    const sessionId = sessionManager.saveSession(null, {
+      code,
+      fileName,
+      language: result.language || detectedLang,
+      nodes: normalizedNodes,
+      edges: normalizedEdges,
+      functions: result.metadata?.functions || [],
+      metadata: result.metadata || {}
+    });
+
     return res.json({
       success: true,
+      sessionId,
       fileName,
       language: result.language || detectedLang,
       functions: result.metadata?.functions || [],

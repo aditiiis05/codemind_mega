@@ -56,6 +56,7 @@ export interface FlowEdge {
 
 export interface FlowchartResponse {
   success: boolean;
+  sessionId?: string;
   fileName?: string;
   language?: string;
   functions?: string[];

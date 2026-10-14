@@ -45,6 +45,7 @@ interface FlowchartPanelProps {
   cursorLine?: number | null;
   cursorEndLine?: number | null;
   onNavigateToCode?: (file: string, lineStart: number, lineEnd?: number) => void;
+  onNodeSelect?: (node: FlowNode | null) => void;
 }
 
 export default function FlowchartPanel({
@@ -56,7 +57,8 @@ export default function FlowchartPanel({
   repo = '',
   cursorLine = null,
   cursorEndLine = null,
-  onNavigateToCode
+  onNavigateToCode,
+  onNodeSelect
 }: FlowchartPanelProps) {
   // View states
   const [viewMode, setViewMode] = useState<FlowchartViewMode>('file');
@@ -272,6 +274,9 @@ export default function FlowchartPanel({
     setSelectedNodeId(node.id);
     setSelectedNode(node);
     setShowDetailPanel(true);
+    if (onNodeSelect) {
+      onNodeSelect(node);
+    }
 
     const targetFile = node.file || fileName;
     if (targetFile && node.lineStart && onNavigateToCode) {
@@ -505,7 +510,14 @@ export default function FlowchartPanel({
                 node={selectedNode}
                 allEdges={currentControlFlowLayout.edges}
                 allNodes={currentControlFlowLayout.nodes}
-                onClose={() => setShowDetailPanel(false)}
+                code={code}
+                fileName={fileName}
+                language={language}
+                sessionId={fileGraphData?.sessionId}
+                onClose={() => {
+                  setShowDetailPanel(false);
+                  if (onNodeSelect) onNodeSelect(null);
+                }}
                 onNavigateToCode={onNavigateToCode}
               />
             )}

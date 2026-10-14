@@ -8,6 +8,7 @@ const aiRoutes = require('./routes/ai');
 const githubRoutes = require('./routes/github');
 const flowchartRoutes = require('./routes/flowchart');
 const projectRoutes = require('./routes/project');
+const tutorRoutes = require('./routes/tutor');
 
 // Create Express app FIRST
 const app = express();
@@ -46,6 +47,7 @@ app.use('/api/github', githubRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/flowchart', flowchartRoutes);
 app.use('/api/project', projectRoutes);
+app.use('/api/tutor', tutorRoutes);
 
 // 404 handler
 app.use((req, res) => {
@@ -54,6 +56,9 @@ app.use((req, res) => {
     message: `Route ${req.method} ${req.path} does not exist`,
     availableEndpoints: [
       'GET /health',
+      'GET /api/tutor/health',
+      'POST /api/tutor/ask',
+      'POST /api/tutor/session',
       'GET /api/github/auth/github-url',
       'GET /api/github/auth/callback',
       'GET /api/github/callback',

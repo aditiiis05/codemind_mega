@@ -608,6 +608,7 @@ function analyzeFile(sourceFile) {
     path,
     filename,
     language,
+    content: content || '',
     lineCount: originalLines.length,
     imports: analysis.imports,
     exports: analysis.exports,

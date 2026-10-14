@@ -10,6 +10,7 @@ import MindMapView from '@/components/views/MindMapView'; // <--- IMPORTED VISUA
 import FlowchartPanel from '@/components/flowchart/FlowchartPanel';
 import { FileNode } from '@/components/views/ExplorerView';
 import { EditorTab } from '@/components/layout/EditorTabs';
+import { FlowNode } from '@/types/flowchart';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4000';
 
@@ -60,6 +61,7 @@ export default function RepoPage() {
   const [cursorEndLine, setCursorEndLine] = useState<number | null>(null);
   const [rightPanelWidth, setRightPanelWidth] = useState<number>(540);
   const [activeRightTab, setActiveRightTab] = useState<'flowchart' | 'mindmap'>('flowchart');
+  const [selectedFlowNode, setSelectedFlowNode] = useState<FlowNode | null>(null);
 
   const getFileExtension = (filename: string) => {
     return filename.split('.').pop()?.toLowerCase() || '';
@@ -518,6 +520,12 @@ export default function RepoPage() {
           setIsAnalyzing(false);
         }
       } : undefined}
+      selectedFlowNode={selectedFlowNode}
+      code={selectedFile ? fileContent : ''}
+      fileName={selectedFile?.name || 'main.py'}
+      language={selectedFile ? getLanguage(selectedFile.name) : 'plaintext'}
+      onClearSelectedNode={() => setSelectedFlowNode(null)}
+      onNavigateToCode={handleNavigateToCode}
     >
       <div className="h-full flex flex-col overflow-hidden">
         {/* Error Message */}
@@ -645,6 +653,7 @@ export default function RepoPage() {
                   cursorLine={cursorLine}
                   cursorEndLine={cursorEndLine}
                   onNavigateToCode={handleNavigateToCode}
+                  onNodeSelect={(node) => setSelectedFlowNode(node)}
                 />
               ) : (
                 <MindMapView
