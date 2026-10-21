@@ -92,6 +92,9 @@ export default function FlowchartPanel({
   // Debounce timer ref for auto-update
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Last-analyzed content hash — skip network call when nothing changed
+  const lastAnalyzedRef = useRef<{ code: string; fileName: string; fn: string | null } | null>(null);
+
   /**
    * Request File Flowchart analysis from backend
    */
@@ -99,6 +102,17 @@ export default function FlowchartPanel({
     async (codeToAnalyze: string, fName: string, lang: string, funcName: string | null = null) => {
       if (!codeToAnalyze.trim()) {
         setFileGraphData(null);
+        return;
+      }
+
+      // Skip if nothing changed since the last successful analysis
+      const key = { code: codeToAnalyze, fileName: fName, fn: funcName };
+      if (
+        lastAnalyzedRef.current &&
+        lastAnalyzedRef.current.code === key.code &&
+        lastAnalyzedRef.current.fileName === key.fileName &&
+        lastAnalyzedRef.current.fn === key.fn
+      ) {
         return;
       }
 
@@ -113,6 +127,7 @@ export default function FlowchartPanel({
           functionName: funcName
         });
 
+        lastAnalyzedRef.current = key;
         setFileGraphData(response);
       } catch (err: unknown) {
         console.error('[FlowchartPanel] Analyze error:', err);
@@ -168,10 +183,10 @@ export default function FlowchartPanel({
       clearTimeout(debounceTimerRef.current);
     }
 
-    // Set 750ms debounce
+    // Set 1200ms debounce — avoids re-parsing on every keystroke
     debounceTimerRef.current = setTimeout(() => {
       fetchFileFlowchart(code, fileName, language || 'plaintext', selectedFunction);
-    }, 750);
+    }, 1200);
 
     return () => {
       if (debounceTimerRef.current) {
@@ -222,7 +237,12 @@ export default function FlowchartPanel({
   useEffect(() => {
     setIsSelectionMode(false);
     setSelectionFlowData(null);
+    lastSelectionLineRef.current = null;
+    lastAnalyzedRef.current = null;
   }, [code, fileName]);
+
+  // Track the last cursor line we sent a selection request for
+  const lastSelectionLineRef = useRef<number | null>(null);
 
   /**
    * Debounced selection fetch: when cursor moves on a non-blank line,
@@ -232,14 +252,18 @@ export default function FlowchartPanel({
     if (cursorLine === null || !code || !language || !fileName) return;
     if (viewMode === 'project') return;
 
+    // Skip if cursor is on the same line as last request
+    if (lastSelectionLineRef.current === cursorLine) return;
+
     // Skip blank lines
     const lines = code.split('\n');
     const lineContent = lines[cursorLine - 1];
     if (lineContent === undefined || lineContent.trim() === '') return;
 
-    // Debounce
+    // Debounce — 800ms so rapid cursor movement doesn't spam the backend
     if (selectionDebounceRef.current) clearTimeout(selectionDebounceRef.current);
     selectionDebounceRef.current = setTimeout(async () => {
+      lastSelectionLineRef.current = cursorLine;
       setIsSelectionLoading(true);
       try {
         const response = await analyzeSelection({
@@ -259,7 +283,7 @@ export default function FlowchartPanel({
       } finally {
         setIsSelectionLoading(false);
       }
-    }, 400);
+    }, 800);
 
     return () => {
       if (selectionDebounceRef.current) clearTimeout(selectionDebounceRef.current);

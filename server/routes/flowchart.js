@@ -22,7 +22,38 @@ function djb2(str) {
   return hash >>> 0; // unsigned
 }
 
-// Module-level parse cache: key = `${filePath}:${djb2(code)}`
+// ---------------------------------------------------------------------------
+// Response cache for /analyze — key = djb2(code)+language+functionName
+// Saves re-parsing the same file content on repeated requests (e.g. cursor moves)
+// TTL: 5 minutes, max 100 entries
+// ---------------------------------------------------------------------------
+const CACHE_TTL_MS = 5 * 60 * 1000;
+const MAX_CACHE_SIZE = 100;
+const analyzeCache = new Map(); // key -> { result, ts }
+
+function cacheKey(code, language, functionName) {
+  return `${djb2(code)}:${language}:${functionName || ''}`;
+}
+
+function getCached(key) {
+  const entry = analyzeCache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.ts > CACHE_TTL_MS) {
+    analyzeCache.delete(key);
+    return null;
+  }
+  return entry.result;
+}
+
+function setCache(key, result) {
+  if (analyzeCache.size >= MAX_CACHE_SIZE) {
+    // evict oldest
+    analyzeCache.delete(analyzeCache.keys().next().value);
+  }
+  analyzeCache.set(key, { result, ts: Date.now() });
+}
+
+// Separate parse cache used by /selection route
 const parseCache = new Map();
 
 /**
@@ -117,6 +148,13 @@ router.post('/analyze', async (req, res) => {
       });
     }
 
+    // Check response cache first
+    const ck = cacheKey(code, detectedLang, functionName);
+    const cached = getCached(ck);
+    if (cached) {
+      return res.json(cached);
+    }
+
     const result = analyzeCodeFlowchart({
       code,
       language: detectedLang,
@@ -142,7 +180,7 @@ router.post('/analyze', async (req, res) => {
       metadata: result.metadata || {}
     });
 
-    return res.json({
+    const response = {
       success: true,
       sessionId,
       fileName,
@@ -160,7 +198,10 @@ router.post('/analyze', async (req, res) => {
         classes: result.metadata?.classes || [],
         parserEngine: result.metadata?.parserEngine || 'ast-adapter'
       }
-    });
+    };
+
+    setCache(ck, response);
+    return res.json(response);
   } catch (error) {
     console.error('[Flowchart API Error]:', error);
     return res.status(500).json({

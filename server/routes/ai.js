@@ -1,5 +1,5 @@
 // server/routes/aiRouter.js
-// Updated router: local Qwen 2.5 Coder 3B (Ollama) with Groq fallback (llama-3.1-8b then 70b)
+// Local Ollama model (configurable via OLLAMA_MODEL env var) with Groq fallback.
 // Requires: npm install ollama node-fetch dotenv
 
 const express = require('express');
@@ -8,26 +8,102 @@ const { Ollama } = require('ollama');
 const fetch = require('node-fetch'); // for Groq fallback
 require('dotenv').config(); // ensure .env is loaded
 
-// Initialize Ollama client
+// ---------------------------------------------------------------------------
+// Ollama client
+// Reads OLLAMA_BASE_URL (preferred) or OLLAMA_HOST for backwards-compat.
+// OLLAMA_MODEL from .env sets the preferred local model; falls back to a safe
+// chain of well-known small models if the preferred one isn't installed.
+// ---------------------------------------------------------------------------
+const OLLAMA_HOST_URL =
+  process.env.OLLAMA_BASE_URL ||
+  process.env.OLLAMA_HOST ||
+  'http://127.0.0.1:11434';
+
 const ollama = new Ollama({
-  host: process.env.OLLAMA_HOST || 'http://127.0.0.1:11434',
-  requestTimeout: 60000 // 60s default request timeout for Ollama SDK
+  host: OLLAMA_HOST_URL,
+  requestTimeout: 60000 // 60 s default request timeout for Ollama SDK
 });
 
-// Groq configuration (fallback)
-const GROQ_API_KEY = process.env.GROQ_API_KEY || null;
-//const GROQ_ENDPOINT = 'https://api.groq.com/v1/chat/completions'; // generic path; adjust if Groq provides different endpoint in future
-const GROQ_ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
-//const GROQ_ENDPOINT = 'https://api.groq.com/v1';
+// The user-configured preferred local model (from .env), or a sensible default.
+const ENV_OLLAMA_MODEL = (process.env.OLLAMA_MODEL || '').trim();
 
-// Small utility constants
-// Prefer codemindai-gemma:latest if available locally; fallback to prior gemma name
-const DEFAULT_LOCAL_PRIMARY = 'codemindai-gemma:latest';
-const DEFAULT_LOCAL_FALLBACK = 'codegemma:2b';
-const GROQ_PRIMARY = 'llama-3.1-8b-instant';
-const GROQ_SECONDARY = 'llama-3.1-70b-versatile';
+// Ordered candidate list for local model selection.
+// The env-configured model is tried first when set.
+const LOCAL_MODEL_CANDIDATES = [
+  ...(ENV_OLLAMA_MODEL ? [ENV_OLLAMA_MODEL] : []),
+  'codemindai-gemma:latest',
+  'codegemma:2b',
+  'qwen2.5-coder:7b',
+  'qwen2.5:3b',
+  'llama3.2:3b',
+  'mistral:7b'
+];
+
+// Keep these for backwards compatibility / display purposes
+const DEFAULT_LOCAL_PRIMARY = LOCAL_MODEL_CANDIDATES[0];
+const DEFAULT_LOCAL_FALLBACK = LOCAL_MODEL_CANDIDATES[1] || 'codegemma:2b';
+
+// ---------------------------------------------------------------------------
+// Groq configuration (cloud fallback)
+// Primary:   qwen/qwen3.8-27b  — confirmed working October 2026
+// Secondary: allam-2-7b        — confirmed working October 2026
+// Deprecated models removed:
+//   llama-3.1-8b-instant  → 404 on this account
+//   llama-3.1-70b-versatile → officially decommissioned
+// ---------------------------------------------------------------------------
+const GROQ_API_KEY = process.env.GROQ_API_KEY || null;
+const GROQ_ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
+const GROQ_PRIMARY = 'qwen/qwen3.8-27b';
+const GROQ_SECONDARY = 'allam-2-7b';
 
 const DEFAULT_TIMEOUT_MS = 30000; // 30 seconds for higher-level requests
+
+// ---------------------------------------------------------------------------
+// Ollama availability cache
+//
+// Problem: when Ollama is offline every AI request wastes several seconds
+// waiting for the SDK's connection attempt to fail before falling through to
+// Groq. This cache probes Ollama with a tight 2-second timeout, remembers
+// the result for OLLAMA_CACHE_TTL_MS, and lets all requests skip Ollama
+// entirely until the TTL expires (at which point one probe fires again).
+//
+// When Ollama comes back online the next probe succeeds, the cache flips to
+// "reachable", and local inference resumes automatically.
+// ---------------------------------------------------------------------------
+const OLLAMA_PROBE_TIMEOUT_MS = 2000;   // how long to wait for the probe
+const OLLAMA_CACHE_TTL_MS     = 30000;  // re-probe every 30 s
+
+let _ollamaCache = {
+  reachable: null,   // null = unknown, true/false = last result
+  checkedAt: 0       // Date.now() of last probe
+};
+
+/**
+ * Returns true if Ollama is reachable right now.
+ * Uses the cache; only fires a real network probe when the TTL has expired.
+ */
+async function isOllamaReachable() {
+  const now = Date.now();
+  if (_ollamaCache.reachable !== null && (now - _ollamaCache.checkedAt) < OLLAMA_CACHE_TTL_MS) {
+    return _ollamaCache.reachable; // serve from cache
+  }
+
+  // TTL expired — run a fresh probe with a tight timeout
+  try {
+    await withTimeout(
+      ollama.list(),
+      OLLAMA_PROBE_TIMEOUT_MS,
+      'Ollama probe timed out'
+    );
+    _ollamaCache = { reachable: true, checkedAt: now };
+    console.log('[Ollama] Reachability probe: ONLINE');
+    return true;
+  } catch {
+    _ollamaCache = { reachable: false, checkedAt: now };
+    console.log(`[Ollama] Reachability probe: OFFLINE (next check in ${OLLAMA_CACHE_TTL_MS / 1000}s)`);
+    return false;
+  }
+}
 
 // Basic fallback suggestions if everything fails
 const FALLBACK_RESPONSES = [
@@ -358,89 +434,143 @@ async function callGroq(model, messages = [], options = {}) {
 }
 
 /**
- * Decide which local model to use based on installed models.
- * Priority:
- *  1) codemindai-gemma
- *  2) codegemma:2b
- *  3) qwen2.5:3b
- *  4) fallback to model param
+ * Decide which local model to use based on actually installed Ollama models.
+ *
+ * Strategy:
+ *  1. Ask Ollama for the installed model list.
+ *  2. Walk LOCAL_MODEL_CANDIDATES in order; return the first one found.
+ *  3. If Ollama is not reachable, throw a descriptive error immediately so the
+ *     caller can skip straight to the Groq fallback without wasting a round-trip.
+ *  4. If Ollama is reachable but none of our candidates are installed, throw a
+ *     descriptive error that names the missing model so the user knows exactly
+ *     what to `ollama pull`.
  */
-async function selectLocalModel(preferred = DEFAULT_LOCAL_PRIMARY) {
+async function selectLocalModel() {
+  let installedNames;
   try {
     const listed = (await ollama.list()).models || [];
-    const names = listed.map(m => m.name || m);
-    // Prefer 'codemindai-gemma:latest' if present (common naming), then older internal names
-    if (names.includes('codemindai-gemma:latest')) return 'codemindai-gemma:latest';
-    //if (names.includes('codemindai-gemma')) return 'codemindai-gemma';
-    if (names.includes('codegemma:2b')) return 'codegemma:2b';
-    if (names.includes('qwen2.5:3b')) return 'qwen2.5:3b';
-    // If nothing found, just return preferred (attempt to run may trigger download)
-    return preferred;
+    installedNames = listed.map(m => (m.name || m).toString().trim());
   } catch (err) {
-    // If ollama.list fails, still return preferred to try
-    return preferred;
+    throw new Error(
+      `Ollama is not reachable at ${OLLAMA_HOST_URL}. ` +
+      `Start Ollama with "ollama serve" and ensure it is running. ` +
+      `(original error: ${err.message})`
+    );
   }
+
+  if (installedNames.length === 0) {
+    throw new Error(
+      `Ollama is running but no models are installed. ` +
+      `Run "ollama pull ${LOCAL_MODEL_CANDIDATES[0]}" to install one.`
+    );
+  }
+
+  // Exact-match first, then prefix-match (e.g. "qwen2.5-coder" matches "qwen2.5-coder:latest")
+  for (const candidate of LOCAL_MODEL_CANDIDATES) {
+    if (installedNames.includes(candidate)) return candidate;
+    // prefix match: "qwen2.5-coder:7b" starts with "qwen2.5-coder"
+    const prefix = candidate.split(':')[0];
+    const found = installedNames.find(n => n === candidate || n.startsWith(prefix + ':'));
+    if (found) return found;
+  }
+
+  throw new Error(
+    `None of the expected local models are installed in Ollama. ` +
+    `Installed: [${installedNames.join(', ')}]. ` +
+    `Run "ollama pull ${LOCAL_MODEL_CANDIDATES[0]}" to install a compatible model, ` +
+    `or set OLLAMA_MODEL=<model> in your .env file to point at an installed model.`
+  );
 }
 
 /**
- * High-level inference: Try local -> local fallback -> Groq 8b -> Groq 70b
+ * High-level inference: Try local Ollama -> Groq primary -> Groq secondary.
+ *
+ * Each provider's failure is captured independently so a Groq error never
+ * hides an Ollama error and vice-versa.  The final thrown error includes all
+ * individual failure messages.
+ *
  * messages: array of {role, content}
  * options: { timeoutMs, num_predict, temperature, top_p, max_tokens }
  */
 async function generateWithFallback(messages = [], options = {}) {
   const timeoutMs = options.timeoutMs || DEFAULT_TIMEOUT_MS;
+  const errors = {}; // keyed by provider label for clear reporting
 
-  // Prepare models to attempt in order
-  const localPrimary = await selectLocalModel(DEFAULT_LOCAL_PRIMARY);
-  const localFallback = DEFAULT_LOCAL_FALLBACK;
-
-  const attemptLocal = async (modelToUse) => {
-    try {
-      const response = await callLocalOllama(modelToUse, messages, {
-        num_predict: options.num_predict || 200,
-        temperature: options.temperature !== undefined ? options.temperature : 0.2,
-        top_p: options.top_p !== undefined ? options.top_p : 0.95,
-        top_k: options.top_k !== undefined ? options.top_k : 40
-      });
-      // Standardize return
-      return { source: 'local', model: modelToUse, response };
-    } catch (e) {
-      // bubble up to the caller; they will try next fallback
-      throw e;
-    }
-  };
-
-  // Try primary local model
+  // ------------------------------------------------------------------
+  // 1. Local Ollama
+  // ------------------------------------------------------------------
+  let localModel = null;
   try {
-    const resp = await withTimeout(attemptLocal(localPrimary), timeoutMs, `Local model ${localPrimary} timed out after ${timeoutMs}ms`);
-    return resp;
-  } catch (localPrimaryErr) {
-    // try local fallback
-    try {
-      const resp = await withTimeout(attemptLocal(localFallback), timeoutMs, `Local fallback ${localFallback} timed out`);
-      return resp;
-    } catch (localFallbackErr) {
-      // local failed; try Groq fallback chain
-      // If no Groq key, fail here
-      if (!GROQ_API_KEY) {
-        throw new Error(`Local models failed: ${localPrimaryErr.message}; ${localFallbackErr.message}. No Groq API key configured for cloud fallback.`);
-      }
+    localModel = await selectLocalModel();
+  } catch (selectErr) {
+    errors.ollama_select = selectErr.message;
+    // Cannot try Ollama at all — fall through to Groq
+  }
 
-      // Try Groq 8B then 70B
-      try {
-        const groqResp = await withTimeout(callGroq(GROQ_PRIMARY, messages, options), timeoutMs, `Groq ${GROQ_PRIMARY} timed out`);
-        return { source: 'groq', model: GROQ_PRIMARY, response: groqResp };
-      } catch (g8Err) {
-        try {
-          const groqResp2 = await withTimeout(callGroq(GROQ_SECONDARY, messages, options), timeoutMs * 2, `Groq ${GROQ_SECONDARY} timed out`);
-          return { source: 'groq', model: GROQ_SECONDARY, response: groqResp2 };
-        } catch (g70Err) {
-          // All fail
-          throw new Error(`All model attempts failed. Local errors: ${localPrimaryErr.message}; ${localFallbackErr.message}. Groq errors: ${g8Err?.message || '8B unknown'}; ${g70Err?.message || '70B unknown'}`);
-        }
-      }
+  if (localModel) {
+    try {
+      const response = await withTimeout(
+        callLocalOllama(localModel, messages, {
+          num_predict: options.num_predict || 200,
+          temperature: options.temperature !== undefined ? options.temperature : 0.2,
+          top_p: options.top_p !== undefined ? options.top_p : 0.95,
+          top_k: options.top_k !== undefined ? options.top_k : 40
+        }),
+        timeoutMs,
+        `Local Ollama model "${localModel}" timed out after ${timeoutMs}ms`
+      );
+      return { source: 'local', model: localModel, response };
+    } catch (localErr) {
+      errors[`ollama_${localModel}`] = localErr.message;
+      console.warn(`[generateWithFallback] Local Ollama failed (${localModel}): ${localErr.message}`);
     }
   }
+
+  // ------------------------------------------------------------------
+  // 2. Groq cloud fallback
+  // ------------------------------------------------------------------
+  if (!GROQ_API_KEY) {
+    const ollamaDetail = Object.entries(errors)
+      .map(([k, v]) => `[${k}] ${v}`)
+      .join('; ');
+    throw new Error(
+      `All local AI providers failed and no Groq API key is configured. ` +
+      `Local errors: ${ollamaDetail || 'none'}. ` +
+      `Set GROQ_API_KEY in your server/.env file to enable cloud fallback.`
+    );
+  }
+
+  // Try Groq primary model
+  try {
+    const groqResp = await withTimeout(
+      callGroq(GROQ_PRIMARY, messages, options),
+      timeoutMs,
+      `Groq "${GROQ_PRIMARY}" timed out after ${timeoutMs}ms`
+    );
+    return { source: 'groq', model: GROQ_PRIMARY, response: groqResp };
+  } catch (g1Err) {
+    errors[`groq_${GROQ_PRIMARY}`] = g1Err.message;
+    console.warn(`[generateWithFallback] Groq primary failed (${GROQ_PRIMARY}): ${g1Err.message}`);
+  }
+
+  // Try Groq secondary model
+  try {
+    const groqResp2 = await withTimeout(
+      callGroq(GROQ_SECONDARY, messages, options),
+      timeoutMs * 2,
+      `Groq "${GROQ_SECONDARY}" timed out after ${timeoutMs * 2}ms`
+    );
+    return { source: 'groq', model: GROQ_SECONDARY, response: groqResp2 };
+  } catch (g2Err) {
+    errors[`groq_${GROQ_SECONDARY}`] = g2Err.message;
+    console.warn(`[generateWithFallback] Groq secondary failed (${GROQ_SECONDARY}): ${g2Err.message}`);
+  }
+
+  // All providers exhausted — build a clear, structured error message
+  const summary = Object.entries(errors)
+    .map(([k, v]) => `  • [${k}]: ${v}`)
+    .join('\n');
+  throw new Error(`All AI providers failed:\n${summary}`);
 }
 
 /* ---------------------------
@@ -678,7 +808,7 @@ Provide clear, structured output with numbered lists. Be thorough but concise.`;
     console.log(`[analyze-repo] Prepared prompt with ${keyFilesContent ? 'key files' : 'structure only'}`);
 
     // This can be heavy -> allow longer timeout and more tokens
-    const result = await generateWithFallback(messages, { timeoutMs: 220000, num_predict: 1500, temperature: 0.3, max_tokens: 2000 });
+    const result = await generateWithFallback(messages, { timeoutMs: 220000, num_predict: 900, temperature: 0.3, max_tokens: 900 });
 
     // Get text - properly handle CodeGemma response format
     let rawContent = '';
@@ -948,7 +1078,7 @@ Code Structure Analysis:
 - Functions (${codeStructure.functions.length}): ${codeStructure.functions.slice(0, 15).map(f => `${f.name}${f.class ? ` (${f.class})` : ''}${f.async ? ' [async]' : ''}`).join(', ')}
 - Classes/Interfaces (${codeStructure.classes.length}): ${codeStructure.classes.map(c => `${c.name} [${c.type}]`).join(', ')}
 - Imports/Dependencies: ${codeStructure.dependencies.slice(0, 15).join(', ')}
-- Exports: ${codeStructure.exports.length > 0 ? structure.exports.slice(0, 5).map(e => `Line ${e.line}`).join(', ') : 'None'}
+- Exports: ${codeStructure.exports.length > 0 ? codeStructure.exports.slice(0, 5).map(e => `Line ${e.line}`).join(', ') : 'None'}
 
 Code:
 \`\`\`
@@ -1035,9 +1165,9 @@ Key guidelines:
     
     const result = await generateWithFallback(messages, { 
       timeoutMs: 90000, // Longer timeout for complex analysis
-      num_predict: 1500, // More tokens for detailed diagrams
+      num_predict: 900,  // Kept under Groq free-tier OTPM limit (1000) for qwen3
       temperature: 0.2, // Lower temperature for more consistent output
-      max_tokens: 2000 
+      max_tokens: 900
     });
     console.log(`[generate-diagram] AI response received. Source: ${result.source}, Model: ${result.model}`);
 
@@ -1183,27 +1313,47 @@ Key guidelines:
 
 /**
  * GET /api/ai/models
- * Returns: { installed: [names], defaultLocalPrimary, defaultLocalFallback }
+ * Returns installed Ollama models plus current Groq model configuration.
  */
 router.get('/models', async (req, res) => {
+  let installed = [];
+  let ollamaReachable = true;
+  let ollamaError = null;
+  let selectedLocalModel = null;
+
   try {
     const listed = (await ollama.list()).models || [];
-    const names = listed.map(m => m.name || m);
-    return res.json({
-      installed: names,
-      defaultLocalPrimary: DEFAULT_LOCAL_PRIMARY,
-      defaultLocalFallback: DEFAULT_LOCAL_FALLBACK
-    });
+    installed = listed.map(m => m.name || m);
   } catch (err) {
+    ollamaReachable = false;
+    ollamaError = err.message;
     console.warn('[models] Could not list models:', err.message);
-    // Return empty but still informative
-    return res.status(200).json({
-      installed: [],
-      note: 'Could not fetch model list; is Ollama running?',
-      defaultLocalPrimary: DEFAULT_LOCAL_PRIMARY,
-      defaultLocalFallback: DEFAULT_LOCAL_FALLBACK
-    });
   }
+
+  if (ollamaReachable && installed.length > 0) {
+    try {
+      selectedLocalModel = await selectLocalModel();
+    } catch (e) {
+      selectedLocalModel = null;
+    }
+  }
+
+  return res.json({
+    ollama: {
+      reachable: ollamaReachable,
+      host: OLLAMA_HOST_URL,
+      installed,
+      selectedModel: selectedLocalModel,
+      configuredModel: ENV_OLLAMA_MODEL || '(not set — using auto-detect)',
+      candidates: LOCAL_MODEL_CANDIDATES,
+      error: ollamaError
+    },
+    groq: {
+      configured: !!GROQ_API_KEY,
+      primary: GROQ_PRIMARY,
+      secondary: GROQ_SECONDARY
+    }
+  });
 });
 
 /**
@@ -1213,8 +1363,16 @@ router.get('/health', (req, res) => {
   res.json({
     status: 'ok',
     time: new Date().toISOString(),
-    localHost: process.env.OLLAMA_HOST || 'http://127.0.0.1:11434',
-    groqConfigured: !!GROQ_API_KEY
+    ollama: {
+      host: OLLAMA_HOST_URL,
+      configuredModel: ENV_OLLAMA_MODEL || '(auto-detect)',
+      candidates: LOCAL_MODEL_CANDIDATES
+    },
+    groq: {
+      configured: !!GROQ_API_KEY,
+      primary: GROQ_PRIMARY,
+      secondary: GROQ_SECONDARY
+    }
   });
 });
 
