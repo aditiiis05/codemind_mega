@@ -870,23 +870,88 @@ Provide clear, structured output with numbered lists. Be thorough but concise.`;
 
 /**
  * POST /api/ai/explain
- * Expects: { code: string }
- * Returns: { explanation: string }
+ * Expects: {
+ *   code: string,
+ *   language?: string,            // source language of the code (informational)
+ *   filePath?: string,
+ *   startLine?: number,
+ *   endLine?: number,
+ *   explainLanguage?: 'en' | 'hi',// response language; default 'en'
+ *   nodeType?: string,            // flowchart node type, when explaining a node
+ *   nodeLabel?: string,
+ *   context?: string              // optional surrounding-context hint
+ * }
+ * Returns: { explanation: string, language: 'en'|'hi', source: 'ai'|'fallback', usedModel?: string }
  *
- * Uses local model for explanation; prefers a friendly, concise explanation
+ * Uses local model (Ollama) -> Groq fallback via generateWithFallback.
+ * On any AI failure (or empty content), returns HTTP 200 with a deterministic
+ * metadata-based fallback explanation (source:'fallback') so the client always
+ * gets something usable — never a 500.
  */
 router.post('/explain', async (req, res) => {
-  const { code } = req.body;
-  if (!code || typeof code !== 'string') return res.status(400).json({ error: 'No code provided' });
+  const {
+    code = '',
+    language = '',
+    filePath = '',
+    startLine = null,
+    endLine = null,
+    explainLanguage = 'en',
+    nodeType = '',
+    nodeLabel = '',
+    context = ''
+  } = req.body;
+
+  // Normalize response language: only 'hi' is supported, everything else -> 'en'
+  const lang = explainLanguage === 'hi' ? 'hi' : 'en';
+
+  // Need at least some code or node metadata to explain
+  if (!code && !nodeType && !nodeLabel) {
+    return res.status(400).json({ error: 'No code or node metadata provided' });
+  }
+
+  // ---- Language-aware system prompt ---------------------------------
+  const systemPrompt = lang === 'hi'
+    ? 'आप शुरुआती लोगों के लिए एक धैर्यवान प्रोग्रामिंग शिक्षक हैं। प्रदान की गई कोड को हिंदी में सरल और स्पष्ट भाषा में समझाएं। कोड पहचानने वाले नाम, फ़ंक्शन नाम, फ़ाइल पथ, API नाम और कीवर्ड को यथावत रखें। बताएं कि कोड क्या करता है और क्यों: महत्वपूर्ण चर, शर्तें, लूप, फ़ंक्शन कॉल और वापसी मान। कोड को चलाएं नहीं और परिणाम गढ़कर न बताएं। कोड को अक्षर-दर-अक्षर न पढ़ें; इसका अर्थ समझाएं। संक्षिप्त रहें: एकल कथन के लिए 3-5 वाक्य, फ़ंक्शन के लिए अधिक।'
+    : 'You are a patient programming teacher for beginners. Explain the provided code in simple, clear English. Preserve code identifiers, function names, file paths, API names, and programming keywords exactly as written. Explain what the code does and why: important variables, conditions, loops, function calls, and return values. Do NOT execute the code or invent runtime results. Do not read source code character by character; explain its meaning. Be concise: 3-5 sentences for a single statement, more for a function.';
+
+  // ---- User prompt: location + node context + code + hint ----------
+  const parts = [];
+
+  const locationBits = [];
+  if (filePath) locationBits.push(filePath);
+  if (startLine != null && endLine != null) {
+    locationBits.push(`lines ${startLine}-${endLine}`);
+  } else if (startLine != null) {
+    locationBits.push(`line ${startLine}`);
+  }
+  if (locationBits.length) {
+    parts.push(`Location: ${locationBits.join(', ')}.`);
+  }
+
+  if (nodeType || nodeLabel) {
+    const nodeLine = lang === 'hi'
+      ? `यह एक फ़्लोचार्ट नोड है (प्रकार: ${nodeType || 'unknown'}, लेबल: "${nodeLabel || ''}"). अपनी व्याख्या को इस नोड की नियंत्रण प्रवाह में भूमिका से जोड़ें।`
+      : `This is a flowchart node of type ${nodeType || 'unknown'} labeled "${nodeLabel || ''}". Relate your explanation to this node's role in the control flow.`;
+    parts.push(nodeLine);
+  }
+
+  if (code) {
+    parts.push(`Code:\n\n${code}`);
+  }
+
+  if (context) {
+    parts.push(`Surrounding context:\n\n${context}`);
+  }
 
   const messages = [
-    { role: 'system', content: 'You are a helpful coding assistant. Explain the provided code in simple, clear steps.' },
-    { role: 'user', content: `Explain what the following code does in simple steps. Be concise but thorough:\n\n${code}` }
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: parts.join('\n\n') }
   ];
 
   try {
-    const result = await generateWithFallback(messages, { timeoutMs: 40000, num_predict: 400, temperature: 0.3 });
+    const result = await generateWithFallback(messages, { timeoutMs: 45000, num_predict: 600, temperature: 0.3 });
 
+    // Extract content text (same local/groq shape handling as /chat and /complete)
     let rawContent = '';
     if (result.source === 'local') {
       rawContent = result.response.message?.content || result.response.output?.[0]?.content?.[0]?.text || JSON.stringify(result.response);
@@ -896,16 +961,65 @@ router.post('/explain', async (req, res) => {
       rawContent = JSON.stringify(result.response);
     }
 
-    const explanation = (rawContent && rawContent.trim()) ? rawContent.trim() : 'No explanation available.';
-    return res.json({ explanation, usedModel: result.model, source: result.source });
+    if (rawContent && rawContent.trim()) {
+      return res.json({ explanation: rawContent.trim(), language: lang, source: 'ai', usedModel: result.model });
+    }
+
+    // Empty AI content -> fall through to the deterministic fallback below
+    throw new Error('AI provider returned empty content');
 
   } catch (error) {
-    console.error('[explain] Error:', error);
-    return res.status(500).json({
-      error: 'Failed to generate explanation',
-      details: error.message,
-      suggestion: 'Try a shorter code snippet or ensure local model is downloaded.'
-    });
+    // ---- Deterministic metadata-based fallback (HTTP 200, not 500) ----
+    console.error('[explain] AI failed, returning fallback:', error.message);
+
+    const unavailableNote = lang === 'hi'
+      ? 'AI व्याख्या सेवा वर्तमान में अनुपलब्ध है, इसलिए यह मेटाडेटा से एक बुनियादी सारांश है।'
+      : 'The AI explanation service is currently unavailable, so this is a basic summary from the node metadata.';
+
+    // Location string (used in both branches)
+    let location = '';
+    if (filePath && startLine != null && endLine != null) {
+      location = lang === 'hi'
+        ? `${filePath} की पंक्तियाँ ${startLine}-${endLine}`
+        : `Lines ${startLine}-${endLine} of ${filePath}`;
+    } else if (filePath && startLine != null) {
+      location = lang === 'hi'
+        ? `${filePath} की पंक्ति ${startLine}`
+        : `Line ${startLine} of ${filePath}`;
+    } else if (filePath) {
+      location = filePath;
+    }
+
+    let fallback;
+    if (nodeType || nodeLabel) {
+      const nodeLine = lang === 'hi'
+        ? `यह ${nodeType || 'एक'} नोड है जिसका लेबल "${nodeLabel || ''}" है।`
+        : `This is a ${nodeType || 'unknown'} node labeled "${nodeLabel || ''}".`;
+      const sentences = [nodeLine];
+      if (location) sentences.push(lang === 'hi' ? `स्थान: ${location}` : `Location: ${location}`);
+      sentences.push(unavailableNote);
+      fallback = sentences.join(' ');
+    } else {
+      // Tiny structural hint detected from the code
+      const constructs = [];
+      if (code) {
+        if (/\bif\b/.test(code) || /\belse\b/.test(code)) constructs.push(lang === 'hi' ? 'शर्त (if/else)' : 'a conditional (if/else)');
+        if (/\bfor\b/.test(code) || /\bwhile\b/.test(code)) constructs.push(lang === 'hi' ? 'लूप (for/while)' : 'a loop (for/while)');
+        if (/\breturn\b/.test(code)) constructs.push(lang === 'hi' ? 'रिटर्न कथन' : 'a return statement');
+        if (/\bfunction\b/.test(code)) constructs.push(lang === 'hi' ? 'फ़ंक्शन परिभाषा' : 'a function definition');
+      }
+      const hint = constructs.length
+        ? (lang === 'hi' ? `यह कोड ${constructs.join(', ')} शामिल करता प्रतीत होता है।` : `This snippet appears to contain ${constructs.join(', ')}.`)
+        : '';
+
+      const sentences = [];
+      if (location) sentences.push(`${location}.`);
+      if (hint) sentences.push(hint);
+      sentences.push(unavailableNote);
+      fallback = sentences.join(' ');
+    }
+
+    return res.json({ explanation: fallback, language: lang, source: 'fallback' });
   }
 });
 
