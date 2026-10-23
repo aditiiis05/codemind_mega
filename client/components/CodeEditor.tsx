@@ -29,7 +29,7 @@ type Props = {
   readOnly?: boolean;
   highlightRange?: { lineStart: number; lineEnd: number; source?: string } | null;
   onCursorChange?: (line: number) => void;
-  onSelectionChange?: (startLine: number, endLine: number) => void;
+  onSelectionChange?: (startLine: number, endLine: number, selectedText?: string) => void;
 };
 
 const CodeEditor = ({
@@ -187,7 +187,23 @@ const CodeEditor = ({
     editor.onDidChangeCursorSelection((e: any) => {
       const sel = e.selection;
       if (sel && onSelectionChange) {
-        onSelectionChange(sel.startLineNumber, sel.endLineNumber);
+        const model = editor.getModel();
+        let selectedText = '';
+        if (model) {
+          try {
+            selectedText = model.getValueInRange(
+              new monaco.Selection(
+                sel.startLineNumber,
+                sel.startColumn,
+                sel.endLineNumber,
+                sel.endColumn
+              )
+            );
+          } catch {
+            selectedText = '';
+          }
+        }
+        onSelectionChange(sel.startLineNumber, sel.endLineNumber, selectedText);
       }
     });
     

@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import axios from 'axios';
-import { Code, Sparkles, Loader2, AlertCircle, Network } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
+import VisualizationHeader from '@/components/visualization/VisualizationHeader';
 import CodeEditor from '@/components/CodeEditor';
 import IDELayout from '@/components/layout/IDELayout';
 import MindMapView from '@/components/views/MindMapView'; // <--- IMPORTED VISUALIZER
@@ -13,6 +14,31 @@ import { EditorTab } from '@/components/layout/EditorTabs';
 import { FlowNode } from '@/types/flowchart';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4000';
+
+// Directories that are never useful to browse or analyze
+const SKIP_DIRS = new Set([
+  'node_modules', '.git', 'dist', 'build', '.next', '__pycache__',
+  'venv', '.venv', 'vendor', 'target', 'out', 'coverage', '.gradle', 'Pods'
+]);
+
+// ── sessionStorage cache for GitHub directory listings ──────────────────────
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+function getCachedDir(key: string): GitHubFile[] | null {
+  try {
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return null;
+    const { data, timestamp } = JSON.parse(raw) as { data: GitHubFile[]; timestamp: number };
+    if (Date.now() - timestamp > CACHE_TTL) { sessionStorage.removeItem(key); return null; }
+    return data;
+  } catch { return null; }
+}
+
+function setCachedDir(key: string, data: GitHubFile[]): void {
+  try {
+    sessionStorage.setItem(key, JSON.stringify({ data, timestamp: Date.now() }));
+  } catch { /* storage full — ignore */ }
+}
 
 interface GitHubFile {
   name: string;
@@ -62,6 +88,23 @@ export default function RepoPage() {
   const [selectedCode, setSelectedCode] = useState('');
   const [activeRightTab, setActiveRightTab] = useState<'flowchart' | 'mindmap'>('flowchart');
   const [selectedFlowNode, setSelectedFlowNode] = useState<FlowNode | null>(null);
+
+  // Session ID for AI Chat (starts null; AIChatView uses its own session internally)
+  const [sessionId] = useState<string | null>(null);
+
+  const handleApplySuggestion = useCallback((suggestionText: string) => {
+    setFileContent(prev => prev + '\n' + suggestionText);
+  }, []);
+
+  const handleCursorChange = useCallback((line: number) => {
+    setCursorLine(line);
+  }, []);
+
+  const handleSelectionChange = useCallback((start: number, end: number, text?: string) => {
+    setCursorLine(start);
+    setCursorEndLine(end);
+    setSelectedCode(text ?? '');
+  }, []);
 
   const getFileExtension = (filename: string) => {
     return filename.split('.').pop()?.toLowerCase() || '';
@@ -125,7 +168,8 @@ export default function RepoPage() {
             continue;
           }
 
-          // item.type === 'dir' -> fetch its contents
+          // item.type === 'dir' -> fetch its contents (skip heavy directories)
+          if (SKIP_DIRS.has(item.name)) continue;
           try {
             const res = await axios.get(
               `https://api.github.com/repos/${owner}/${repo}/contents/${item.path}`,
@@ -265,6 +309,25 @@ export default function RepoPage() {
         throw new Error('GitHub authentication required. Please sign in with GitHub.');
       }
 
+      // ── Check sessionStorage cache first ──────────────────────────────────
+      const cacheKey = `gh_tree_${owner}/${repo}/${path}`;
+      const cached = getCachedDir(cacheKey);
+      if (cached) {
+        console.log(`[Repo] Cache hit for path: "${path}"`);
+        if (!path) {
+          setRepoContent(cached);
+          setAllFiles(cached);
+        } else {
+          setDirContents(prev => ({ ...prev, [path]: cached }));
+          setAllFiles(prev => {
+            const existingPaths = new Set(prev.map(f => f.path));
+            const newItems = cached.filter(f => !existingPaths.has(f.path));
+            return newItems.length ? [...prev, ...newItems] : prev;
+          });
+        }
+        return;
+      }
+
       console.log(`[Repo] Fetching repository content for path: "${path}"`);
 
       const response = await axios.get(
@@ -282,7 +345,13 @@ export default function RepoPage() {
         throw new Error('No data received from GitHub API');
       }
 
-      const items: GitHubFile[] = Array.isArray(response.data) ? response.data : [response.data];
+      const raw: GitHubFile[] = Array.isArray(response.data) ? response.data : [response.data];
+
+      // ── Filter out heavy/irrelevant directories client-side ────────────────
+      const items = raw.filter(item => !(item.type === 'dir' && SKIP_DIRS.has(item.name)));
+
+      // Store in sessionStorage cache
+      setCachedDir(cacheKey, items);
 
       if (!path) {
         // Root level — set as the base repo content
@@ -295,7 +364,7 @@ export default function RepoPage() {
         setAllFiles(prev => {
           const existingPaths = new Set(prev.map(f => f.path));
           const newItems = items.filter(f => !existingPaths.has(f.path));
-          return [...prev, ...newItems];
+          return newItems.length ? [...prev, ...newItems] : prev;
         });
       }
     } catch (err: unknown) {
@@ -321,6 +390,7 @@ export default function RepoPage() {
     // Set selected file immediately so the editor panel appears with a loading state
     setSelectedFile(file);
     setFileContent('// Loading...');
+    setCursorLine(null);
     setCursorEndLine(null);
     setSelectedCode('');
 
@@ -468,19 +538,12 @@ export default function RepoPage() {
     isDirty: false
   }] : [];
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-[#0d1117]">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 text-[#2f81f7] animate-spin mx-auto mb-4" />
-          <p className="text-[#7d8590]">Loading repository...</p>
-        </div>
-      </div>
-    );
-  }
+  const firstSelectableFile = repoContent.find(f => f.type === 'file') || allFiles.find(f => f.type === 'file');
 
+  // Render the IDE shell immediately; explorer shows a skeleton while the API loads
   return (
     <IDELayout
+      isTreeLoading={isLoading}
       files={convertToFileNodes(repoContent)}
       expandedDirs={expandedDirs}
       onFileClick={handleFileNodeClick}
@@ -495,30 +558,12 @@ export default function RepoPage() {
       }}
       visualizationContent={
         <div className="h-full flex flex-col overflow-hidden">
-          {/* Tab switcher: Flowchart | Mind Map */}
-          <div className="flex items-center gap-0.5 px-2 py-1 bg-[#1c2128] border-b border-[#30363d] shrink-0">
-            <button
-              onClick={() => setActiveRightTab('flowchart')}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-semibold transition-colors ${
-                activeRightTab === 'flowchart'
-                  ? 'bg-[#1f6feb] text-white'
-                  : 'text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d]'
-              }`}
-            >
-              <Network size={12} />
-              <span>Flowchart</span>
-            </button>
-            <button
-              onClick={() => setActiveRightTab('mindmap')}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-semibold transition-colors ${
-                activeRightTab === 'mindmap'
-                  ? 'bg-[#1f6feb] text-white'
-                  : 'text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d]'
-              }`}
-            >
-              <span>Mind Map</span>
-            </button>
-          </div>
+          {/* Main Visualization Header */}
+          <VisualizationHeader
+            activeTab={activeRightTab}
+            onTabChange={setActiveRightTab}
+            fileName={selectedFile?.name || null}
+          />
           {/* Panel body */}
           <div className="flex-1 overflow-hidden min-h-0">
             {activeRightTab === 'flowchart' ? (
@@ -569,6 +614,12 @@ export default function RepoPage() {
       language={selectedFile ? getLanguage(selectedFile.name) : 'plaintext'}
       onClearSelectedNode={() => setSelectedFlowNode(null)}
       onNavigateToCode={handleNavigateToCode}
+      sessionId={sessionId}
+      onApplySuggestion={handleApplySuggestion}
+      onAnalyzeRepo={analyzeRepository}
+      isAnalyzing={isAnalyzing}
+      analysisResult={streamingAnalysis}
+      repoAvailable={repoContent.length > 0}
     >
       <div className="h-full flex flex-col overflow-hidden">
         {/* Error Message */}
@@ -578,27 +629,6 @@ export default function RepoPage() {
             <span>{error}</span>
           </div>
         )}
-
-        {/* AI Analysis Button Bar */}
-        <div className="p-2 border-b border-[#30363d] bg-[#1c2128] shrink-0">
-          <button
-            onClick={analyzeRepository}
-            disabled={isAnalyzing || repoContent.length === 0}
-            className="w-full px-4 py-1.5 bg-linear-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:from-gray-600 disabled:to-gray-600 text-white rounded flex items-center justify-center gap-2 transition-all font-semibold text-xs uppercase tracking-wide disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isAnalyzing ? (
-              <>
-                <Loader2 size={14} className="animate-spin" />
-                Analyzing Repository...
-              </>
-            ) : (
-              <>
-                <Sparkles size={14} />
-                Run AI Repository Analysis
-              </>
-            )}
-          </button>
-        </div>
 
         {/* Editor */}
         <div className="flex-1 overflow-hidden min-h-0">
@@ -613,18 +643,23 @@ export default function RepoPage() {
               }}
               readOnly={false}
               highlightRange={highlightRange}
-              onCursorChange={(line) => setCursorLine(line)}
-              onSelectionChange={(start, end, text) => {
-                setCursorLine(start);
-                setCursorEndLine(end);
-                setSelectedCode(text ?? '');
-              }}
+              onCursorChange={handleCursorChange}
+              onSelectionChange={handleSelectionChange}
             />
           ) : (
-            <div className="flex items-center justify-center h-full text-center flex-col opacity-50">
-              <Code className="w-16 h-16 text-[#7d8590] mb-4" />
-              <p className="text-[#7d8590]">No file selected</p>
-              <p className="text-xs text-[#7d8590] mt-1">Select a file from the repository explorer</p>
+            /* VS Code-style empty editor — clean dark canvas, no feature cards */
+            <div className="h-full flex flex-col items-center justify-center bg-[#0d1117] select-none">
+              <p className="text-[13px] text-[#484f58]">
+                Select a file from the explorer to open it
+              </p>
+              {firstSelectableFile && (
+                <button
+                  onClick={() => handleItemClick(firstSelectableFile)}
+                  className="mt-3 text-[12px] text-[#2f81f7] hover:text-[#388bfd] hover:underline transition-colors"
+                >
+                  Open {firstSelectableFile.name}
+                </button>
+              )}
             </div>
           )}
         </div>

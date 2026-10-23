@@ -60,10 +60,10 @@ function FileTreeItem({
   return (
     <div>
       <div
-        className={`flex items-center gap-1.5 py-[3px] pr-2 cursor-pointer select-none rounded-sm transition-colors duration-100 ${
+        className={`flex items-center gap-1.5 py-[3px] pr-2 cursor-pointer select-none rounded-md transition-colors duration-100 ${
           isSelected
-            ? 'bg-[#094771] text-white'
-            : 'text-[#cccccc] hover:bg-[#2a2d2e]'
+            ? 'bg-[#1f6feb]/20 text-[#58a6ff] font-medium border-l-2 border-[#58a6ff]'
+            : 'text-[#c9d1d9] hover:bg-[#21262d]/70 border-l-2 border-transparent'
         }`}
         style={{ paddingLeft: `${8 + indent}px` }}
         onClick={() => {
@@ -134,11 +134,11 @@ export default function ExplorerView({
   selectedFile,
 }: ExplorerViewProps) {
   return (
-    <div className="flex flex-col h-full overflow-hidden text-[#cccccc]">
+    <div className="flex flex-col h-full overflow-hidden text-[#e6edf3]">
       {/* Repository Files section */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden">
         {/* Section Header */}
-        <div className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-[#858585] border-b border-[#3e3e42]/40 select-none">
+        <div className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-[#8b949e] border-b border-[#30363d] select-none bg-[#161b22]/50">
           Repository Files
         </div>
 
