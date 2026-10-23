@@ -1,11 +1,8 @@
-// C:\codemind1\client\app\page.tsx (COMPLETE - HOME PAGE WITH OAUTH - UPDATED)
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Github, Brain, Loader, Search, Star, GitFork, Eye } from 'lucide-react';
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4000'; // eslint-disable-line @typescript-eslint/no-unused-vars
+import { Github, Brain, Loader2, Search, Star, GitFork, Code2, LogOut, AlertCircle, BookOpen } from 'lucide-react';
 
 interface Repository {
   id: number;
@@ -17,78 +14,101 @@ interface Repository {
   forks_count: number;
   watchers_count: number;
   language: string | null;
+  updated_at: string;
+  private: boolean;
   owner: {
     login: string;
+    avatar_url: string;
   };
+}
+
+const LANG_COLORS: Record<string, string> = {
+  JavaScript: '#f1e05a',
+  TypeScript: '#3178c6',
+  Python: '#3572A5',
+  Java: '#b07219',
+  'C++': '#f34b7d',
+  C: '#555555',
+  'C#': '#178600',
+  Go: '#00ADD8',
+  Rust: '#dea584',
+  PHP: '#4F5D95',
+  Ruby: '#701516',
+  Swift: '#F05138',
+  Kotlin: '#A97BFF',
+  HTML: '#e34c26',
+  CSS: '#563d7c',
+  Shell: '#89e051',
+  Vue: '#41b883',
+  Dart: '#00B4AB',
+};
+
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const days = Math.floor(diff / 86400000);
+  if (days === 0) return 'today';
+  if (days === 1) return 'yesterday';
+  if (days < 30) return `${days}d ago`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months}mo ago`;
+  return `${Math.floor(months / 12)}y ago`;
 }
 
 export default function HomePage() {
   const router = useRouter();
   const [repos, setRepos] = useState<Repository[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isSigningIn, setIsSigningIn] = useState(false); // eslint-disable-line @typescript-eslint/no-unused-vars
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState('');
-  // Track whether we're waiting for a callback token (avoids window access during SSR)
   const [hasCallbackToken, setHasCallbackToken] = useState(false);
+  const [userLogin, setUserLogin] = useState('');
 
-  // Check for existing token and handle OAuth callback
   useEffect(() => {
-    // First, check for auth-success callback from backend with token
     const params = new URLSearchParams(window.location.search);
     const callbackToken = params.get('token');
     if (callbackToken) {
       setHasCallbackToken(true);
-      console.log('[Auth Success] Token received from backend callback');
       localStorage.setItem('github_token', callbackToken);
       setIsAuthenticated(true);
       window.history.replaceState({}, document.title, '/');
       fetchUserRepos(callbackToken);
       return;
     }
-
-    // Check for existing token
     const token = localStorage.getItem('github_token');
     if (token) {
       setIsAuthenticated(true);
       fetchUserRepos(token);
-    } else if (!isSigningIn) {
-      // Only redirect if we're not in the middle of signing in
-      // and there's no token in the URL
+    } else {
       router.push('/login');
     }
-  }, [router, isSigningIn]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fetchUserRepos = async (token: string) => {
+    setIsLoading(true);
+    setError('');
     try {
-      setIsLoading(true);
-      setError('');
-      console.log('[Repos] Fetching user repositories...');
-      
-      const response = await fetch('https://api.github.com/user/repos?sort=updated&per_page=30', {
+      const response = await fetch('https://api.github.com/user/repos?sort=updated&per_page=50', {
         headers: {
-          'Authorization': `token ${token}`,
-          'Accept': 'application/vnd.github.v3+json',
+          Authorization: `token ${token}`,
+          Accept: 'application/vnd.github.v3+json',
         },
       });
-
       if (!response.ok) {
         if (response.status === 401) {
           localStorage.removeItem('github_token');
           setIsAuthenticated(false);
-          setError('Token expired. Please sign in again.');
+          setError('Session expired. Please sign in again.');
           return;
         }
-        throw new Error('Failed to fetch repos');
+        throw new Error('Failed to fetch repositories');
       }
-      
-      const data = await response.json();
-      console.log(`[Repos] Successfully fetched ${data.length} repositories`);
+      const data: Repository[] = await response.json();
       setRepos(data);
-    } catch (error) {
-      console.error('[Repos Error]', error);
-      setError('Failed to fetch repositories');
+      if (data.length > 0) setUserLogin(data[0].owner.login);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch repositories');
       localStorage.removeItem('github_token');
       setIsAuthenticated(false);
     } finally {
@@ -101,154 +121,229 @@ export default function HomePage() {
   };
 
   const handleLogout = () => {
-    console.log('[Logout] User logging out...');
     localStorage.removeItem('github_token');
     setIsAuthenticated(false);
     setRepos([]);
-    setError('');
+    router.push('/login');
   };
 
-  const filteredRepos = repos.filter(repo =>
-    repo.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (repo.description && repo.description.toLowerCase().includes(searchQuery.toLowerCase()))
+  const filteredRepos = repos.filter(
+    (r) =>
+      r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (r.description && r.description.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  // Not authenticated - show loading (will redirect via useEffect above)
-  if (!isAuthenticated) {
-    // If we're waiting for a callback token or actively signing in, show loading
-    if (hasCallbackToken || isSigningIn) {
-      return (
-        <div className="min-h-screen bg-gradient-to-br from-[#0d1117] via-[#1a1a2e] to-[#16213e] flex items-center justify-center">
-          <div className="text-center">
-            <Loader className="w-12 h-12 text-[#2f81f7] animate-spin mx-auto mb-4" />
-            <p className="text-[#7d8590]">Authenticating...</p>
-          </div>
-        </div>
-      );
-    }
-
-    // Otherwise show redirecting spinner (useEffect will redirect to /login)
+  // ── Loading / unauthenticated screens ──────────────────────────────────
+  if (!isAuthenticated || hasCallbackToken) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#0d1117] via-[#1a1a2e] to-[#16213e] flex items-center justify-center">
-        <div className="text-center">
-          <Loader className="w-12 h-12 text-[#2f81f7] animate-spin mx-auto mb-4" />
-          <p className="text-[#7d8590]">Redirecting...</p>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0d1117' }}>
+        <div style={{ textAlign: 'center' }}>
+          <Loader2 style={{ width: 40, height: 40, color: '#2f81f7', animation: 'spin 1s linear infinite', margin: '0 auto 12px' }} />
+          <p style={{ color: '#7d8590', fontSize: 14 }}>
+            {hasCallbackToken ? 'Authenticating…' : 'Redirecting…'}
+          </p>
         </div>
       </div>
     );
   }
 
-  // Authenticated - show repositories
+  // ── Main authenticated view ─────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0d1117] to-[#161b22] p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-12">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg">
-              <Brain className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-[#f0f6fc]">CodeMind.AI</h1>
-              <p className="text-[#7d8590] text-sm">Your Repositories</p>
-            </div>
+    <div style={{ minHeight: '100vh', background: '#0d1117', overflowY: 'auto', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+      {/* ── Top navigation bar ── */}
+      <nav style={{
+        position: 'sticky', top: 0, zIndex: 50,
+        background: '#161b22', borderBottom: '1px solid #30363d',
+        padding: '0 24px', height: 56,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 32, height: 32, borderRadius: 8, background: 'linear-gradient(135deg,#2f81f7,#7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Brain style={{ width: 18, height: 18, color: '#fff' }} />
           </div>
-          <button
-            onClick={handleLogout}
-            className="px-4 py-2 bg-red-600/20 hover:bg-red-600/30 border border-red-600/50 text-red-300 rounded-lg transition-all text-sm font-medium"
-          >
-            Sign Out
-          </button>
+          <span style={{ fontWeight: 700, fontSize: 16, color: '#e6edf3', letterSpacing: '-0.3px' }}>CodeMind.AI</span>
         </div>
 
-        {/* Error Message */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {userLogin && (
+            <span style={{ fontSize: 13, color: '#8b949e' }}>@{userLogin}</span>
+          )}
+          <button
+            onClick={handleLogout}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '6px 12px', borderRadius: 6,
+              background: 'transparent', border: '1px solid #30363d',
+              color: '#8b949e', fontSize: 12, fontWeight: 500, cursor: 'pointer',
+              transition: 'all 0.15s',
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#f85149'; (e.currentTarget as HTMLButtonElement).style.color = '#f85149'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#30363d'; (e.currentTarget as HTMLButtonElement).style.color = '#8b949e'; }}
+          >
+            <LogOut style={{ width: 13, height: 13 }} />
+            Sign out
+          </button>
+        </div>
+      </nav>
+
+      {/* ── Page body ── */}
+      <div style={{ maxWidth: 960, margin: '0 auto', padding: '32px 24px 64px' }}>
+
+        {/* ── Page heading ── */}
+        <div style={{ marginBottom: 24 }}>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: '#e6edf3', margin: 0 }}>Your Repositories</h1>
+          <p style={{ fontSize: 13, color: '#8b949e', marginTop: 4 }}>
+            Select a repository to open it in the CodeMind.AI editor
+          </p>
+        </div>
+
+        {/* ── Error banner ── */}
         {error && (
-          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/50 rounded-lg text-red-300 text-sm">
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            padding: '10px 14px', borderRadius: 8, marginBottom: 20,
+            background: 'rgba(248,81,73,0.1)', border: '1px solid rgba(248,81,73,0.4)',
+            color: '#f85149', fontSize: 13,
+          }}>
+            <AlertCircle style={{ width: 15, height: 15, flexShrink: 0 }} />
             {error}
           </div>
         )}
 
-        {/* Search Bar */}
-        <div className="mb-8">
-          <div className="relative">
-            <Search className="absolute left-3 top-3 w-5 h-5 text-[#7d8590]" />
-            <input
-              type="text"
-              placeholder="Search repositories..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 bg-[#21262d] border border-[#30363d] rounded-lg text-[#e6edf3] placeholder-[#7d8590] focus:border-[#2f81f7] focus:outline-none focus:ring-2 focus:ring-[#2f81f7]/20 transition-all"
-            />
-          </div>
+        {/* ── Search bar ── */}
+        <div style={{ position: 'relative', marginBottom: 24 }}>
+          <Search style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', width: 15, height: 15, color: '#8b949e', pointerEvents: 'none' }} />
+          <input
+            type="text"
+            placeholder="Find a repository…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              width: '100%', padding: '9px 12px 9px 36px',
+              background: '#0d1117', border: '1px solid #30363d',
+              borderRadius: 6, color: '#e6edf3', fontSize: 13,
+              outline: 'none', boxSizing: 'border-box',
+            }}
+            onFocus={e => (e.currentTarget.style.borderColor = '#2f81f7')}
+            onBlur={e => (e.currentTarget.style.borderColor = '#30363d')}
+          />
         </div>
 
-        {/* Loading State */}
+        {/* ── Repo count ── */}
+        {!isLoading && filteredRepos.length > 0 && (
+          <p style={{ fontSize: 12, color: '#8b949e', marginBottom: 12 }}>
+            {filteredRepos.length} {filteredRepos.length === 1 ? 'repository' : 'repositories'}
+            {searchQuery && ` matching "${searchQuery}"`}
+          </p>
+        )}
+
+        {/* ── Loading state ── */}
         {isLoading ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="text-center">
-              <Loader className="w-12 h-12 text-[#2f81f7] animate-spin mx-auto mb-4" />
-              <p className="text-[#7d8590]">Loading your repositories...</p>
-            </div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 0', gap: 12 }}>
+            <Loader2 style={{ width: 32, height: 32, color: '#2f81f7', animation: 'spin 1s linear infinite' }} />
+            <p style={{ color: '#8b949e', fontSize: 13 }}>Loading your repositories…</p>
           </div>
         ) : filteredRepos.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredRepos.map((repo) => (
-              <button
-                key={repo.id}
-                onClick={() => handleRepoSelect(repo.owner.login, repo.name)}
-                className="p-5 rounded-lg bg-[#161b22] border border-[#30363d] hover:border-[#2f81f7]/50 hover:bg-[#1c2128] transition-all duration-300 transform hover:scale-105 active:scale-95 text-left group"
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <Github className="w-8 h-8 text-[#2f81f7] group-hover:text-[#1f6feb] transition-colors" />
-                  {repo.language && (
-                    <span className="px-2 py-1 bg-[#2f81f7]/20 text-[#2f81f7] rounded-full text-xs font-semibold">
-                      {repo.language}
-                    </span>
-                  )}
-                </div>
+          /* ── Repository list ── */
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            {filteredRepos.map((repo) => {
+              const langColor = repo.language ? (LANG_COLORS[repo.language] ?? '#8b949e') : null;
+              return (
+                <button
+                  key={repo.id}
+                  onClick={() => handleRepoSelect(repo.owner.login, repo.name)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 14,
+                    padding: '14px 16px', width: '100%', textAlign: 'left',
+                    background: '#161b22', border: '1px solid #21262d',
+                    borderRadius: 8, cursor: 'pointer', transition: 'all 0.12s',
+                    marginBottom: 6,
+                  }}
+                  onMouseEnter={e => {
+                    const b = e.currentTarget as HTMLButtonElement;
+                    b.style.background = '#1c2128';
+                    b.style.borderColor = '#388bfd';
+                  }}
+                  onMouseLeave={e => {
+                    const b = e.currentTarget as HTMLButtonElement;
+                    b.style.background = '#161b22';
+                    b.style.borderColor = '#21262d';
+                  }}
+                >
+                  {/* Icon */}
+                  <div style={{ flexShrink: 0, width: 36, height: 36, borderRadius: 8, background: '#21262d', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {repo.private
+                      ? <BookOpen style={{ width: 16, height: 16, color: '#8b949e' }} />
+                      : <Github style={{ width: 16, height: 16, color: '#8b949e' }} />
+                    }
+                  </div>
 
-                <h3 className="text-lg font-semibold text-[#f0f6fc] group-hover:text-[#2f81f7] transition-colors truncate">
-                  {repo.name}
-                </h3>
+                  {/* Main content */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                      <span style={{ fontWeight: 600, fontSize: 14, color: '#2f81f7', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {repo.name}
+                      </span>
+                      {repo.private && (
+                        <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 4, border: '1px solid #30363d', color: '#8b949e', flexShrink: 0 }}>
+                          Private
+                        </span>
+                      )}
+                    </div>
+                    {repo.description && (
+                      <p style={{ fontSize: 12, color: '#8b949e', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {repo.description}
+                      </p>
+                    )}
 
-                {repo.description && (
-                  <p className="text-sm text-[#7d8590] mt-2 line-clamp-2">
-                    {repo.description}
-                  </p>
-                )}
+                    {/* Meta row */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 6 }}>
+                      {repo.language && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                          <span style={{ width: 10, height: 10, borderRadius: '50%', background: langColor ?? '#8b949e', flexShrink: 0, display: 'inline-block' }} />
+                          <span style={{ fontSize: 11, color: '#8b949e' }}>{repo.language}</span>
+                        </div>
+                      )}
+                      {repo.stargazers_count > 0 && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <Star style={{ width: 11, height: 11, color: '#8b949e' }} />
+                          <span style={{ fontSize: 11, color: '#8b949e' }}>{repo.stargazers_count}</span>
+                        </div>
+                      )}
+                      {repo.forks_count > 0 && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <GitFork style={{ width: 11, height: 11, color: '#8b949e' }} />
+                          <span style={{ fontSize: 11, color: '#8b949e' }}>{repo.forks_count}</span>
+                        </div>
+                      )}
+                      {repo.updated_at && (
+                        <span style={{ fontSize: 11, color: '#8b949e', marginLeft: 'auto' }}>
+                          Updated {timeAgo(repo.updated_at)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
 
-                <div className="flex items-center gap-3 mt-3 text-xs text-[#7d8590]">
-                  {repo.stargazers_count > 0 && (
-                    <div className="flex items-center gap-1 hover:text-[#2f81f7] transition-colors">
-                      <Star className="w-3 h-3" />
-                      {repo.stargazers_count}
-                    </div>
-                  )}
-                  {repo.forks_count > 0 && (
-                    <div className="flex items-center gap-1 hover:text-[#2f81f7] transition-colors">
-                      <GitFork className="w-3 h-3" />
-                      {repo.forks_count}
-                    </div>
-                  )}
-                  {repo.watchers_count > 0 && (
-                    <div className="flex items-center gap-1 hover:text-[#2f81f7] transition-colors">
-                      <Eye className="w-3 h-3" />
-                      {repo.watchers_count}
-                    </div>
-                  )}
-                </div>
-              </button>
-            ))}
+                  {/* Right arrow / open hint */}
+                  <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6, color: '#8b949e' }}>
+                    <Code2 style={{ width: 14, height: 14 }} />
+                    <span style={{ fontSize: 11 }}>Open</span>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         ) : (
-          <div className="text-center py-16">
-            <p className="text-[#7d8590] mb-4">
-              {searchQuery ? 'No repositories found matching your search' : 'No repositories available'}
+          /* ── Empty state ── */
+          <div style={{ textAlign: 'center', padding: '80px 0' }}>
+            <Github style={{ width: 40, height: 40, color: '#30363d', margin: '0 auto 12px' }} />
+            <p style={{ color: '#8b949e', fontSize: 14, margin: 0 }}>
+              {searchQuery ? `No repositories match "${searchQuery}"` : 'No repositories found'}
             </p>
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="text-[#2f81f7] hover:text-[#1f6feb] transition-colors text-sm"
+                style={{ marginTop: 12, fontSize: 13, color: '#2f81f7', background: 'none', border: 'none', cursor: 'pointer' }}
               >
                 Clear search
               </button>
@@ -256,6 +351,9 @@ export default function HomePage() {
           </div>
         )}
       </div>
+
+      {/* Spinner keyframe */}
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
