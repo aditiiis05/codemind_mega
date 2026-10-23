@@ -1,44 +1,73 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Network, GitBranch, Activity, FileCode, AlertCircle } from 'lucide-react';
-import MermaidChart from '../MermaidChart';
-
-import { FileNode } from './ExplorerView';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  Search,
+  X,
+  ZoomIn,
+  ZoomOut,
+  Maximize2,
+  ChevronDown,
+  RefreshCw,
+  FileCode,
+  AlertCircle,
+  Loader2,
+  Brain,
+  Download
+} from 'lucide-react';
+import MermaidChart, { MermaidChartHandle } from '../MermaidChart';
 
 interface MindMapViewProps {
-  // This component now needs the FILE CONTENT, not the diagram code,
-  // because it will send this content to the AI to be analyzed.
   selectedFileContent?: string | null;
-  // Optional: Trigger generation externally
   triggerGeneration?: { type: 'flowchart' | 'mindmap' | null; timestamp?: number };
-  // Optional: File metadata for better analysis
   fileName?: string | null;
   language?: string | null;
-  onGenerateVisualization?: (node: FileNode, type: 'flowchart' | 'mindmap') => void;
 }
 
-export default function MindMapView({ selectedFileContent = null, triggerGeneration, fileName, language }: MindMapViewProps) {
+export default function MindMapView({
+  selectedFileContent = null,
+  triggerGeneration,
+  fileName,
+  language
+}: MindMapViewProps) {
   const [mermaidCode, setMermaidCode] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeView, setActiveView] = useState<'flowchart' | 'mindmap' | null>(null);
 
-  // Reset state when a new file is selected
+  // Mind map controls
+  const [searchQuery, setSearchQuery] = useState('');
+  const [zoom, setZoom] = useState(1.0);
+  const [moreOptionsOpen, setMoreOptionsOpen] = useState(false);
+
+  const mermaidChartRef = useRef<MermaidChartHandle>(null);
+  const moreOptionsRef = useRef<HTMLDivElement>(null);
+
+  // Close more options dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (moreOptionsRef.current && !moreOptionsRef.current.contains(event.target as Node)) {
+        setMoreOptionsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Reset state when selected file content changes
   useEffect(() => {
     setMermaidCode('');
     setError(null);
-    setActiveView(null);
+    setSearchQuery('');
+    setZoom(1.0);
   }, [selectedFileContent]);
 
-  // Function to call your AI Backend
-  const handleGenerate = async (type: 'flowchart' | 'mindmap') => {
+  // Generate mind map diagram using AI backend
+  const handleGenerateMindMap = async () => {
     if (!selectedFileContent) return;
 
     setIsLoading(true);
     setError(null);
-    setActiveView(type);
-    setMermaidCode(''); // Clear previous chart
+    setMermaidCode('');
 
     try {
       const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4000';
@@ -47,7 +76,7 @@ export default function MindMapView({ selectedFileContent = null, triggerGenerat
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           codeContent: selectedFileContent,
-          diagramType: type,
+          diagramType: 'mindmap',
           fileName: fileName || null,
           language: language || null,
         }),
@@ -67,7 +96,7 @@ export default function MindMapView({ selectedFileContent = null, triggerGenerat
       }
     } catch (err: unknown) {
       console.error('[MindMapView] Error generating diagram:', err);
-      setError(err instanceof Error ? err.message : 'Failed to generate diagram. Is the server running?');
+      setError(err instanceof Error ? err.message : 'Failed to generate mind map. Is the backend server running?');
     } finally {
       setIsLoading(false);
     }
@@ -75,119 +104,232 @@ export default function MindMapView({ selectedFileContent = null, triggerGenerat
 
   // Handle external trigger for generation
   useEffect(() => {
-    if (triggerGeneration?.type && selectedFileContent && triggerGeneration.timestamp) {
-      handleGenerate(triggerGeneration.type);
+    if (triggerGeneration?.type === 'mindmap' && selectedFileContent && triggerGeneration.timestamp) {
+      handleGenerateMindMap();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [triggerGeneration?.timestamp]);
 
-  return (
-    <div className="h-full flex flex-col bg-[#252526] overflow-hidden border-l border-[#3e3e42]">
-      <style jsx>{`
-        .mindmap-header {
-          padding: 10px 16px;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-          background: #252526;
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-        .header-title {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          font-size: 11px;
-          font-weight: 600;
-          color: #9cdcfe;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
-        .mindmap-canvas {
-          flex: 1;
-          overflow: hidden; /* MermaidChart handles scrolling */
-          padding: 0;
-          background: #1e1e1e;
-          position: relative;
-        }
-        .placeholder-container {
-          position: absolute;
-          inset: 0;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          color: #6b7280;
-          gap: 12px;
-          text-align: center;
-          padding: 20px;
-        }
-      `}</style>
+  // Zoom handlers
+  const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.15, 2.5));
+  const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.15, 0.4));
+  const handleResetZoom = () => setZoom(1.0);
+  const handleFitToView = () => setZoom(1.0);
 
-      {/* --- HEADER SECTION --- */}
-      <div className="mindmap-header">
-        <div className="header-title">
-          <Network size={14} />
-          <span>Code Visualization</span>
+  // Export handlers
+  const handleExport = (format: 'png' | 'svg' | 'pdf') => {
+    setMoreOptionsOpen(false);
+    mermaidChartRef.current?.exportChart(format);
+  };
+
+  return (
+    <div className="h-full flex flex-col bg-[#0d1117] text-[#e6edf3] overflow-hidden select-none">
+      {/* ── Mind Map Toolbar ── */}
+      <div className="flex items-center gap-2 px-3 py-1.5 bg-[#161b22] border-b border-[#30363d] shrink-0">
+        {/* Search nodes */}
+        <div className="relative flex-1 min-w-[120px]">
+          <Search size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#8b949e]" />
+          <input
+            type="text"
+            placeholder="Search mind map nodes…"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            disabled={!mermaidCode}
+            className="w-full bg-[#0d1117] border border-[#30363d] rounded pl-7 pr-6 py-1 text-xs text-[#c9d1d9] placeholder-[#7d8590] focus:border-[#58a6ff] focus:outline-none transition-colors disabled:opacity-50"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-[#8b949e] hover:text-[#e6edf3]"
+              title="Clear search"
+            >
+              <X size={11} />
+            </button>
+          )}
         </div>
 
-        {/* Control Buttons */}
-        <div className="flex gap-2">
+        {/* Zoom controls */}
+        <div className="flex items-center gap-0.5 bg-[#0d1117] p-0.5 rounded border border-[#30363d] shrink-0">
           <button
-            onClick={() => handleGenerate('flowchart')}
-            disabled={!selectedFileContent || isLoading}
-            className={`flex-1 flex items-center justify-center gap-2 px-3 py-1.5 rounded text-xs font-medium transition-all
-              ${activeView === 'flowchart' ? 'bg-[#007acc] text-white' : 'bg-[#3c3c3c] hover:bg-[#4c4c4c] text-gray-300'}
-              ${(!selectedFileContent || isLoading) && 'opacity-50 cursor-not-allowed'}
-            `}
+            type="button"
+            onClick={handleZoomOut}
+            title="Zoom out"
+            aria-label="Zoom out"
+            disabled={!mermaidCode}
+            className="p-1 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d] rounded transition-colors disabled:opacity-40"
           >
-            <GitBranch size={14} />
-            Flowchart
+            <ZoomOut size={12} />
           </button>
 
           <button
-            onClick={() => handleGenerate('mindmap')}
-            disabled={!selectedFileContent || isLoading}
-            className={`flex-1 flex items-center justify-center gap-2 px-3 py-1.5 rounded text-xs font-medium transition-all
-              ${activeView === 'mindmap' ? 'bg-[#007acc] text-white' : 'bg-[#3c3c3c] hover:bg-[#4c4c4c] text-gray-300'}
-              ${(!selectedFileContent || isLoading) && 'opacity-50 cursor-not-allowed'}
-            `}
+            type="button"
+            onClick={handleResetZoom}
+            title="Reset zoom to 100%"
+            aria-label="Reset zoom"
+            disabled={!mermaidCode}
+            className="min-w-[34px] px-1 text-center py-0.5 text-[10px] font-mono text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d] rounded transition-colors disabled:opacity-40"
           >
-            <Activity size={14} />
-            Mind Map
+            {Math.round(zoom * 100)}%
           </button>
+
+          <button
+            type="button"
+            onClick={handleZoomIn}
+            title="Zoom in"
+            aria-label="Zoom in"
+            disabled={!mermaidCode}
+            className="p-1 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d] rounded transition-colors disabled:opacity-40"
+          >
+            <ZoomIn size={12} />
+          </button>
+
+          <div className="w-px h-3 bg-[#30363d] mx-0.5" />
+
+          <button
+            type="button"
+            onClick={handleFitToView}
+            title="Fit to view"
+            aria-label="Fit to view"
+            disabled={!mermaidCode}
+            className="p-1 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d] rounded transition-colors disabled:opacity-40"
+          >
+            <Maximize2 size={12} />
+          </button>
+        </div>
+
+        {/* More options dropdown */}
+        <div className="relative shrink-0" ref={moreOptionsRef}>
+          <button
+            type="button"
+            onClick={() => setMoreOptionsOpen(prev => !prev)}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#21262d] hover:bg-[#30363d] border border-[#30363d] text-[#e6edf3] font-medium text-[11px] transition-colors focus:outline-none focus:border-[#58a6ff]/60"
+            title="Mind map options and export"
+            aria-expanded={moreOptionsOpen}
+          >
+            <span>Options</span>
+            <ChevronDown size={11} className={`text-[#8b949e] transition-transform ${moreOptionsOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {moreOptionsOpen && (
+            <div className="absolute right-0 top-full mt-1 w-44 bg-[#1c2128] border border-[#30363d] rounded-md shadow-xl py-1 z-50 text-[11px]">
+              <div className="px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-[#8b949e] border-b border-[#30363d]/40 mb-1">
+                Mind Map Actions
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setMoreOptionsOpen(false);
+                  handleGenerateMindMap();
+                }}
+                disabled={!selectedFileContent || isLoading}
+                className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left hover:bg-[#21262d] text-[#c9d1d9] transition-colors disabled:opacity-40"
+              >
+                <RefreshCw size={12} className={isLoading ? 'animate-spin text-[#58a6ff]' : 'text-[#8b949e]'} />
+                <span>Regenerate Map</span>
+              </button>
+
+              <div className="border-t border-[#30363d]/40 my-1" />
+              <div className="px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[#8b949e]">
+                Export
+              </div>
+
+              <button
+                type="button"
+                onClick={() => handleExport('svg')}
+                disabled={!mermaidCode}
+                className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left hover:bg-[#21262d] text-[#c9d1d9] transition-colors disabled:opacity-40"
+              >
+                <Download size={12} className="text-[#8b949e]" />
+                <span>Export SVG</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleExport('png')}
+                disabled={!mermaidCode}
+                className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left hover:bg-[#21262d] text-[#c9d1d9] transition-colors disabled:opacity-40"
+              >
+                <Download size={12} className="text-[#8b949e]" />
+                <span>Export PNG</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleExport('pdf')}
+                disabled={!mermaidCode}
+                className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left hover:bg-[#21262d] text-[#c9d1d9] transition-colors disabled:opacity-40"
+              >
+                <Download size={12} className="text-[#8b949e]" />
+                <span>Export PDF</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* --- CANVAS SECTION --- */}
-      <div className="mindmap-canvas">
+      {/* ── Mind Map Canvas ── */}
+      <div className="flex-1 relative overflow-hidden bg-[#0d1117]">
         {isLoading ? (
-          <div className="placeholder-container">
-            <div className="animate-spin h-6 w-6 border-2 border-[#007acc] border-t-transparent rounded-full mb-2"></div>
-            <span className="text-xs text-gray-400">AI is analyzing structure...</span>
+          <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center text-[#7d8590] gap-3">
+            <Loader2 size={32} className="text-[#58a6ff] animate-spin" />
+            <div>
+              <p className="text-sm font-semibold text-[#e6edf3]">Generating Mind Map</p>
+              <p className="text-xs text-[#7d8590] mt-1">Analyzing code architecture, classes, and hierarchy with AI…</p>
+            </div>
           </div>
         ) : error ? (
-          <div className="placeholder-container text-red-400">
-            <AlertCircle size={32} />
-            <span className="text-sm font-medium">Generation Failed</span>
-            <span className="text-xs opacity-70">{error}</span>
+          <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
+            <div className="p-3 rounded-full bg-red-500/10 text-red-400 mb-3 border border-red-500/30">
+              <AlertCircle size={28} />
+            </div>
+            <h3 className="text-sm font-bold text-red-400 mb-1">Mind Map Generation Failed</h3>
+            <p className="text-xs text-[#7d8590] max-w-md mb-4">{error}</p>
+            <button
+              type="button"
+              onClick={handleGenerateMindMap}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-[#e6edf3] rounded text-xs font-semibold transition-all border border-[#30363d]"
+            >
+              <RefreshCw size={13} />
+              <span>Retry Generation</span>
+            </button>
           </div>
         ) : mermaidCode ? (
-          // RENDER SUCCESS
-          <div className="w-full h-full p-4 overflow-auto">
-            <MermaidChart chart={mermaidCode} />
+          <div className="w-full h-full overflow-auto">
+            <MermaidChart
+              ref={mermaidChartRef}
+              chart={mermaidCode}
+              zoom={zoom}
+              searchQuery={searchQuery}
+              hideExportBar={true}
+            />
+          </div>
+        ) : selectedFileContent ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center text-[#7d8590]">
+            <div className="p-3 bg-[#161b22] rounded-xl border border-[#30363d] mb-3">
+              <Brain size={32} className="text-[#58a6ff]" />
+            </div>
+            <h3 className="text-sm font-bold text-[#e6edf3] mb-1">Code Architecture Mind Map</h3>
+            <p className="text-xs text-[#7d8590] max-w-sm mb-4">
+              Generate an interactive hierarchical mind map of {fileName || 'current file'} to visualize classes, functions, and dependencies.
+            </p>
+            <button
+              type="button"
+              onClick={handleGenerateMindMap}
+              className="flex items-center gap-2 px-4 py-2 bg-[#1f6feb] hover:bg-[#388bfd] text-white rounded-md text-xs font-semibold shadow-md transition-all active:scale-95"
+            >
+              <Brain size={14} />
+              <span>Generate Mind Map</span>
+            </button>
           </div>
         ) : (
-          // INITIAL STATE
-          <div className="placeholder-container opacity-50">
-            <FileCode size={40} />
-            <div>
-              <p className="text-sm font-medium text-gray-400">No Visualization</p>
-              <p className="text-xs text-gray-600 mt-1">
-                {!selectedFileContent 
-                  ? "Select a file to enable controls" 
-                  : "Click a button above to generate"}
-              </p>
-            </div>
+          <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center text-[#7d8590]">
+            <FileCode size={36} className="text-[#30363d] mb-3" />
+            <p className="text-sm font-semibold text-[#e6edf3]">No File Selected</p>
+            <p className="text-xs text-[#7d8590] max-w-xs mt-1">
+              Select a file from the repository explorer on the left to generate its architecture mind map.
+            </p>
           </div>
         )}
       </div>

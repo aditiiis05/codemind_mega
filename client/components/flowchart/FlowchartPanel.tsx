@@ -23,7 +23,6 @@ import {
 import { analyzeFile, analyzeProject, analyzeSelection } from '@/services/flowchartApi';
 import { layoutControlFlowGraph } from './flowLayout';
 import FlowToolbar from './FlowToolbar';
-import FlowFilters from './FlowFilters';
 import FlowLegend from './FlowLegend';
 import FlowchartCanvas, { FlowchartCanvasHandle } from './FlowchartCanvas';
 import NodeDetailPanel from './NodeDetailPanel';
@@ -390,7 +389,7 @@ export default function FlowchartPanel({
   return (
     <div className="h-full flex flex-col bg-[#0d1117] text-[#e6edf3] overflow-hidden select-none">
 
-      {/* Flow Toolbar — file name badge shown here */}
+      {/* Flow Toolbar — compact 2-row controls with View, Detail, and Filters dropdowns */}
       <FlowToolbar
         viewMode={viewMode}
         onViewModeChange={handleViewModeChange}
@@ -424,18 +423,13 @@ export default function FlowchartPanel({
         fileName={fileName}
         detailLevel={detailLevel}
         onDetailLevelChange={setDetailLevel}
-      />
-
-      {/* Filter Bar */}
-      <FlowFilters
         activeFilter={filter}
         onFilterChange={setFilter}
         counts={filterCounts}
-        isProjectMode={viewMode === 'project'}
       />
 
       {/* Main Canvas Area */}
-      <div className="flex-1 relative overflow-hidden">
+      <div className="flex-1 min-h-0 relative overflow-hidden">
         {isLoading && !fileGraphData && !projectGraphData ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0d1117] text-[#7d8590] gap-3">
             <Loader2 size={32} className="text-[#58a6ff] animate-spin" />

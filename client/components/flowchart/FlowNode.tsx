@@ -272,8 +272,9 @@ export default function FlowNode({
             </span>
           )}
         </div>
-        <div className="text-[14px] font-mono font-bold text-purple-100 leading-snug
-                        overflow-hidden whitespace-nowrap text-ellipsis">
+        <div className="text-[13px] font-mono font-bold text-purple-100 leading-snug
+                        overflow-hidden"
+             style={{ maxHeight: 40, wordBreak: 'break-word' }}>
           {truncateCode(title !== 'Function' ? code : label.replace(/^def\s+/, ''), 44)}
         </div>
         <div className="text-[10px] text-purple-400 truncate">
@@ -313,7 +314,7 @@ export default function FlowNode({
           )}
         </div>
         <div className="text-[13px] font-mono text-teal-100 leading-snug overflow-hidden"
-             style={{ maxHeight: 36 }}>
+             style={{ maxHeight: 36, wordBreak: 'break-word' }}>
           {truncateCode(code, 50)}
         </div>
       </div>
@@ -350,7 +351,7 @@ export default function FlowNode({
           )}
         </div>
         <div className="text-[13px] font-mono text-sky-100 leading-snug overflow-hidden"
-             style={{ maxHeight: 36 }}>
+             style={{ maxHeight: 36, wordBreak: 'break-word' }}>
           {truncateCode(code, 50)}
         </div>
       </div>

@@ -1,6 +1,4 @@
-'use client';
-
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useImperativeHandle, forwardRef } from 'react';
 import mermaid from 'mermaid';
 import { Canvg } from 'canvg';
 import { jsPDF } from 'jspdf';
@@ -13,11 +11,21 @@ mermaid.initialize({
   fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
 });
 
-interface MermaidChartProps {
-  chart: string;
+export interface MermaidChartHandle {
+  exportChart: (format: 'png' | 'svg' | 'pdf') => Promise<void>;
 }
 
-export default function MermaidChart({ chart }: MermaidChartProps) {
+interface MermaidChartProps {
+  chart: string;
+  zoom?: number;
+  searchQuery?: string;
+  hideExportBar?: boolean;
+}
+
+const MermaidChart = forwardRef<MermaidChartHandle, MermaidChartProps>(function MermaidChart(
+  { chart, zoom = 1.0, searchQuery = '', hideExportBar = false },
+  ref
+) {
   const [svgContent, setSvgContent] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState<string | null>(null);
@@ -315,6 +323,29 @@ export default function MermaidChart({ chart }: MermaidChartProps) {
     }
   };
 
+  useImperativeHandle(ref, () => ({
+    exportChart: handleExport
+  }));
+
+  // Highlight search matches within the rendered SVG
+  useEffect(() => {
+    if (!svgContent) return;
+    const container = document.querySelector('.mermaid-output');
+    if (!container) return;
+
+    const textElements = container.querySelectorAll('text');
+    textElements.forEach(el => {
+      const match = searchQuery && el.textContent?.toLowerCase().includes(searchQuery.toLowerCase());
+      if (match) {
+        (el as SVGTextElement).style.fill = '#58a6ff';
+        (el as SVGTextElement).style.fontWeight = 'bold';
+      } else {
+        (el as SVGTextElement).style.fill = '';
+        (el as SVGTextElement).style.fontWeight = '';
+      }
+    });
+  }, [svgContent, searchQuery]);
+
   // ===================================================================
   // RENDER CHART
   // ===================================================================
@@ -357,46 +388,52 @@ export default function MermaidChart({ chart }: MermaidChartProps) {
 
   return (
     <div className="w-full min-h-full flex flex-col items-center">
-      {/* Export Toolbar */}
-      <div className="flex gap-2 mb-4 items-center justify-end w-full px-4">
-        <span className="font-mono text-xs text-gray-400 mr-2">Export:</span>
-        
-        <button
-          className="px-3 py-1.5 rounded bg-gray-800 text-xs text-white hover:bg-gray-700 border border-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          disabled={!!exporting || !svgContent}
-          onClick={() => handleExport('svg')}
-        >
-          {exporting === 'svg' ? '⏳ SVG' : '📄 SVG'}
-        </button>
+      {/* Export Toolbar (only shown if not hidden by parent) */}
+      {!hideExportBar && (
+        <div className="flex gap-2 mb-4 items-center justify-end w-full px-4">
+          <span className="font-mono text-xs text-gray-400 mr-2">Export:</span>
+          
+          <button
+            className="px-3 py-1.5 rounded bg-gray-800 text-xs text-white hover:bg-gray-700 border border-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            disabled={!!exporting || !svgContent}
+            onClick={() => handleExport('svg')}
+          >
+            {exporting === 'svg' ? '⏳ SVG' : '📄 SVG'}
+          </button>
 
-        <button
-          className="px-3 py-1.5 rounded bg-gray-800 text-xs text-white hover:bg-gray-700 border border-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          disabled={!!exporting || !svgContent}
-          onClick={() => handleExport('png')}
-        >
-          {exporting === 'png' ? '⏳ PNG' : '🖼️ PNG'}
-        </button>
+          <button
+            className="px-3 py-1.5 rounded bg-gray-800 text-xs text-white hover:bg-gray-700 border border-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            disabled={!!exporting || !svgContent}
+            onClick={() => handleExport('png')}
+          >
+            {exporting === 'png' ? '⏳ PNG' : '🖼️ PNG'}
+          </button>
 
-        <button
-          className="px-3 py-1.5 rounded bg-gray-800 text-xs text-white hover:bg-gray-700 border border-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          disabled={!!exporting || !svgContent}
-          onClick={() => handleExport('pdf')}
-        >
-          {exporting === 'pdf' ? '⏳ PDF' : '📑 PDF'}
-        </button>
+          <button
+            className="px-3 py-1.5 rounded bg-gray-800 text-xs text-white hover:bg-gray-700 border border-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            disabled={!!exporting || !svgContent}
+            onClick={() => handleExport('pdf')}
+          >
+            {exporting === 'pdf' ? '⏳ PDF' : '📑 PDF'}
+          </button>
 
-        {exporting && (
-          <span className="ml-2 text-xs text-blue-400 animate-pulse">
-            Exporting {exporting.toUpperCase()}...
-          </span>
-        )}
-      </div>
+          {exporting && (
+            <span className="ml-2 text-xs text-blue-400 animate-pulse">
+              Exporting {exporting.toUpperCase()}...
+            </span>
+          )}
+        </div>
+      )}
 
-      {/* Diagram Display */}
+      {/* Diagram Display with zoom transform */}
       <div className="w-full min-h-full flex justify-center items-start overflow-auto p-4">
         {svgContent ? (
-          <div 
-            className="mermaid-output"
+          <div
+            className="mermaid-output transition-transform duration-100 ease-out"
+            style={{
+              transform: `scale(${zoom})`,
+              transformOrigin: 'top center'
+            }}
             dangerouslySetInnerHTML={{ __html: svgContent }} 
           />
         ) : (
@@ -407,4 +444,6 @@ export default function MermaidChart({ chart }: MermaidChartProps) {
       </div>
     </div>
   );
-}
+});
+
+export default MermaidChart;
