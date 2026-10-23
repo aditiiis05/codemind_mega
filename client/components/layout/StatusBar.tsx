@@ -18,7 +18,7 @@ export default function StatusBar({
   aiStatus = 'ready'
 }: StatusBarProps) {
   return (
-    <div className="h-7 bg-gradient-to-r from-[#007acc]/30 via-[#1e1e1e] to-[#1e1e1e] border-t border-[#3e3e42]/50 flex items-center px-4 gap-6 text-[11px] shadow-lg">
+    <div className="h-7 shrink-0 bg-gradient-to-r from-[#007acc]/30 via-[#1e1e1e] to-[#1e1e1e] border-t border-[#3e3e42]/50 flex items-center px-4 gap-6 text-[11px] shadow-lg">
       <style jsx>{`
         .status-item {
           display: flex;

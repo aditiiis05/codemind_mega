@@ -1,6 +1,6 @@
 'use client';
 
-import { X } from 'lucide-react';
+import { X, FileCode } from 'lucide-react';
 
 export interface EditorTab {
   id: string;
@@ -23,132 +23,64 @@ export default function EditorTabs({
   onTabClose
 }: EditorTabsProps) {
   return (
-    <div className="h-10 bg-gradient-to-r from-[#2d2d30] to-[#1e1e1e] border-b border-[#3e3e42]/50 flex items-center gap-1 px-2 overflow-x-auto scroll-smooth shadow-md">
+    <div className="h-9 bg-[#161b22] border-b border-[#30363d] flex items-center gap-0.5 px-2 overflow-x-auto select-none shrink-0 scrollbar-none">
       <style jsx>{`
-        ::-webkit-scrollbar {
-          height: 6px;
+        div::-webkit-scrollbar {
+          height: 3px;
         }
-
-        ::-webkit-scrollbar-track {
-          background: transparent;
+        div::-webkit-scrollbar-track {
+          background: #161b22;
         }
-
-        ::-webkit-scrollbar-thumb {
-          background: rgba(128, 128, 128, 0.3);
-          border-radius: 3px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-          background: rgba(128, 128, 128, 0.5);
-        }
-
-        .editor-tab {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          padding: 6px 12px;
-          background: transparent;
-          border-radius: 4px 4px 0 0;
-          cursor: pointer;
-          font-size: 12px;
-          color: #858585;
-          user-select: none;
-          white-space: nowrap;
-          transition: all 0.2s ease;
-          border-bottom: 2px solid transparent;
-          margin-bottom: -2px;
-          height: 100%;
-        }
-
-        .editor-tab:hover {
-          background: rgba(255, 255, 255, 0.08);
-          color: #cccccc;
-        }
-
-        .editor-tab.active {
-          background: linear-gradient(to bottom, rgba(37, 37, 38, 1), rgba(30, 30, 30, 1));
-          color: #cccccc;
-          border-bottom-color: #0ea5e9;
-          box-shadow: inset 0 -2px 0 #0ea5e9;
-        }
-
-        .editor-tab.active::after {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          height: 2px;
-          background: linear-gradient(90deg, #0ea5e9, transparent);
+        div::-webkit-scrollbar-thumb {
+          background: #30363d;
           border-radius: 2px;
-          opacity: 0.5;
         }
-
-        .tab-name {
-          max-width: 120px;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          font-weight: 500;
-        }
-
-        .tab-dirty {
-          width: 6px;
-          height: 6px;
-          border-radius: 50%;
-          background: #0ea5e9;
-          animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.5; }
-        }
-
-        .close-btn {
-          padding: 2px 4px;
-          border-radius: 3px;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          opacity: 0;
-        }
-
-        .editor-tab:hover .close-btn {
-          opacity: 1;
-        }
-
-        .close-btn:hover {
-          background: rgba(255, 255, 255, 0.12);
-        }
-
-        .close-btn:active {
-          transform: scale(0.9);
+        div::-webkit-scrollbar-thumb:hover {
+          background: #484f58;
         }
       `}</style>
 
-      {tabs.map((tab) => (
-        <div
-          key={tab.id}
-          className={`editor-tab relative ${activeTabId === tab.id ? 'active' : ''}`}
-          onClick={() => onTabClick(tab.id)}
-        >
-          <span className="tab-name">{tab.name}</span>
-
-          {tab.isDirty && <div className="tab-dirty" />}
-
-          <button
-            className="close-btn"
-            onClick={(e) => {
-              e.stopPropagation();
-              onTabClose(tab.id);
-            }}
+      {tabs.map((tab) => {
+        const isActive = activeTabId === tab.id;
+        return (
+          <div
+            key={tab.id}
+            onClick={() => onTabClick(tab.id)}
+            className={`group relative flex items-center gap-2 h-full px-3 text-xs font-mono transition-colors cursor-pointer border-r border-[#21262d] ${
+              isActive
+                ? 'bg-[#0d1117] text-[#e6edf3] font-medium border-t-2 border-t-[#38bdf8]'
+                : 'bg-transparent text-[#8b949e] hover:bg-[#21262d]/60 hover:text-[#c9d1d9] border-t-2 border-t-transparent'
+            }`}
+            title={tab.name}
           >
-            <X size={14} />
-          </button>
-        </div>
-      ))}
+            <FileCode
+              className={`w-3.5 h-3.5 shrink-0 ${
+                isActive ? 'text-[#38bdf8]' : 'text-[#8b949e] group-hover:text-[#c9d1d9]'
+              }`}
+            />
+            <span className="max-w-[140px] truncate">{tab.name}</span>
+
+            {tab.isDirty && (
+              <span
+                className="w-2 h-2 rounded-full bg-[#38bdf8] shrink-0 animate-pulse"
+                title="Unsaved changes"
+              />
+            )}
+
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onTabClose(tab.id);
+              }}
+              className="p-0.5 rounded text-[#8b949e] opacity-0 group-hover:opacity-100 hover:bg-[#30363d] hover:text-[#f85149] transition-all ml-1"
+              aria-label={`Close ${tab.name}`}
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+        );
+      })}
     </div>
   );
 }
+

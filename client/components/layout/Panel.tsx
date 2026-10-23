@@ -1,138 +1,126 @@
 'use client';
 
-import { ReactNode } from 'react';
-import { X, ChevronUp } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, ChevronDown, ChevronUp, Terminal, AlertCircle, FileText, Bug } from 'lucide-react';
 
 interface PanelProps {
+  isOpen?: boolean;
   onClose?: () => void;
-  children?: ReactNode;
 }
 
-export default function Panel({ onClose = () => {} }: PanelProps) {
+type BottomTab = 'problems' | 'output' | 'debug' | 'terminal';
+
+export default function Panel({ onClose }: PanelProps) {
+  const [activeTab, setActiveTab] = useState<BottomTab>('terminal');
+  const [isCollapsed, setIsCollapsed] = useState(true);
+
+  const tabs: Array<{ id: BottomTab; label: string; icon: React.ReactNode; badge?: string }> = [
+    { id: 'problems', label: 'Problems', icon: <AlertCircle size={12} />, badge: '0' },
+    { id: 'output', label: 'Output', icon: <FileText size={12} /> },
+    { id: 'debug', label: 'Debug Console', icon: <Bug size={12} /> },
+    { id: 'terminal', label: 'Terminal', icon: <Terminal size={12} /> },
+  ];
+
   return (
-    <div className="h-48 bg-transparent border-t border-[#3e3e42]/50 flex flex-col shadow-2xl">
-
-      <style jsx>{`
-        .panel-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 12px 16px;
-          background: linear-gradient(to bottom, rgba(45, 45, 48, 0.9), rgba(37, 37, 38, 0.8));
-          backdrop-filter: blur(8px);
-          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-          transition: all 0.2s ease;
-        }
-
-        .panel-header:hover {
-          background: linear-gradient(to bottom, rgba(50, 50, 54, 0.95), rgba(42, 42, 46, 0.9));
-        }
-
-        .panel-tabs {
-          display: flex;
-          gap: 2px;
-        }
-
-        .panel-tab {
-          padding: 6px 12px;
-          font-size: 12px;
-          background: transparent;
-          border: none;
-          color: #858585;
-          cursor: pointer;
-          border-radius: 4px 4px 0 0;
-          transition: all 0.2s ease;
-          font-weight: 500;
-        }
-
-        .panel-tab:hover {
-          background: rgba(255, 255, 255, 0.05);
-          color: #cccccc;
-        }
-
-        .panel-tab.active {
-          background: rgba(14, 165, 233, 0.15);
-          color: #0ea5e9;
-          border-bottom: 2px solid #0ea5e9;
-        }
-
-        .panel-buttons {
-          display: flex;
-          gap: 4px;
-        }
-
-        .panel-btn {
-          padding: 4px;
-          border-radius: 4px;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          color: #858585;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: transparent;
-          border: none;
-        }
-
-        .panel-btn:hover {
-          background: rgba(255, 255, 255, 0.08);
-          color: #cccccc;
-          transform: scale(1.1);
-        }
-
-        .panel-btn:active {
-          transform: scale(0.95);
-        }
-
-        .panel-content {
-          flex: 1;
-          overflow-y: auto;
-          padding: 12px 16px;
-          font-size: 12px;
-        }
-
-        .panel-content::-webkit-scrollbar {
-          width: 8px;
-        }
-
-        .panel-content::-webkit-scrollbar-track {
-          background: rgba(30, 30, 30, 0.3);
-        }
-
-        .panel-content::-webkit-scrollbar-thumb {
-          background: rgba(128, 128, 128, 0.3);
-          border-radius: 4px;
-        }
-
-        .panel-content::-webkit-scrollbar-thumb:hover {
-          background: rgba(128, 128, 128, 0.5);
-        }
-      `}</style>
-
-      <div className="panel-header">
-        <div className="panel-tabs">
-          <button className="panel-tab active">Problems</button>
-          <button className="panel-tab">Output</button>
-          <button className="panel-tab">Debug Console</button>
-          <button className="panel-tab">Terminal</button>
+    <div
+      className={`shrink-0 bg-[#161b22] border-t border-[#30363d] flex flex-col transition-all duration-200 select-none ${
+        isCollapsed ? 'h-7' : 'h-40'
+      }`}
+    >
+      {/* ── Panel Header Bar ── */}
+      <div className="h-7 flex items-center justify-between px-3 bg-[#1c2128] border-b border-[#30363d]/60 shrink-0">
+        <div className="flex items-center gap-1 h-full">
+          {tabs.map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  if (isCollapsed) setIsCollapsed(false);
+                }}
+                className={`flex items-center gap-1.5 px-2.5 h-full text-[11px] font-medium transition-colors border-b-2 ${
+                  isActive && !isCollapsed
+                    ? 'text-[#58a6ff] border-[#1f6feb] bg-[#161b22]'
+                    : 'text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d] border-transparent'
+                }`}
+              >
+                {tab.icon}
+                <span>{tab.label}</span>
+                {tab.badge && (
+                  <span className="px-1 py-0.2 rounded-full text-[9px] bg-[#21262d] text-[#8b949e] border border-[#30363d]">
+                    {tab.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
-        <div className="panel-buttons">
-          <button className="panel-btn" aria-label="Minimize">
-            <ChevronUp size={16} />
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setIsCollapsed((prev) => !prev)}
+            aria-label={isCollapsed ? 'Expand panel' : 'Collapse panel'}
+            title={isCollapsed ? 'Expand panel' : 'Collapse panel'}
+            className="p-1 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d] rounded transition-colors"
+          >
+            {isCollapsed ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
           </button>
-          <button className="panel-btn" onClick={onClose} aria-label="Close">
-            <X size={16} />
-          </button>
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close panel"
+              title="Close panel"
+              className="p-1 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d] rounded transition-colors"
+            >
+              <X size={13} />
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="panel-content">
-        <div className="text-[#858585] text-center py-6">
-          <p className="mb-2">No problems detected</p>
-          <p className="text-[11px] text-[#6d6d6d]">Linter: Ready</p>
+      {/* ── Panel Content Body (hidden when collapsed) ── */}
+      {!isCollapsed && (
+        <div className="flex-1 overflow-y-auto p-3 text-xs font-mono bg-[#0d1117] text-[#c9d1d9] min-h-0">
+          {activeTab === 'problems' && (
+            <div className="flex items-center justify-center h-full text-[#8b949e] text-center">
+              <div>
+                <AlertCircle size={20} className="mx-auto mb-1 text-[#3fb950]" />
+                <p className="text-[11px]">No problems have been detected in the workspace.</p>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'output' && (
+            <div className="space-y-1 text-[11px] leading-relaxed text-[#8b949e]">
+              <p className="text-[#3fb950]">[CodeMind] Language Server initialized.</p>
+              <p>[CodeMind] Real-time AST parser ready.</p>
+              <p>[CodeMind] AI assistant telemetry active.</p>
+              <p>[CodeMind] Control flow graph engine standing by.</p>
+            </div>
+          )}
+
+          {activeTab === 'debug' && (
+            <div className="flex items-center justify-center h-full text-[#8b949e] text-center">
+              <p className="text-[11px]">Debugger is idle. Set a breakpoint or run project analysis.</p>
+            </div>
+          )}
+
+          {activeTab === 'terminal' && (
+            <div className="space-y-1 text-[11px] leading-relaxed">
+              <p className="text-[#8b949e]">CodeMind.AI Embedded Terminal [Version 1.0.0]</p>
+              <p className="text-[#8b949e]">(c) CodeMind AI Corporation. All rights reserved.</p>
+              <div className="flex items-center gap-1.5 pt-2 text-[#58a6ff]">
+                <span>codemind@ide:~/workspace$</span>
+                <span className="w-1.5 h-3.5 bg-[#58a6ff] animate-pulse inline-block" />
+              </div>
+            </div>
+          )}
         </div>
-      </div>
+      )}
     </div>
   );
 }

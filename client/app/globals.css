@@ -1017,6 +1017,26 @@ select:focus {
   transition-timing-function: var(--ease-standard);
 }
 
+/* IDE panel scrollbars — thin and dark */
+.ide-panel ::-webkit-scrollbar,
+.ide-scrollbar::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+.ide-panel ::-webkit-scrollbar-track,
+.ide-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.ide-panel ::-webkit-scrollbar-thumb,
+.ide-scrollbar::-webkit-scrollbar-thumb {
+  background: #30363d;
+  border-radius: 2px;
+}
+.ide-panel ::-webkit-scrollbar-thumb:hover,
+.ide-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #484f58;
+}
+
 /* Focus visible for accessibility */
 button:focus-visible,
 input:focus-visible,
