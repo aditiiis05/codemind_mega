@@ -53,13 +53,13 @@ export default function RepoPage() {
   const [fileContent, setFileContent] = useState('');
   const [isLoadingFile, setIsLoadingFile] = useState(false); // eslint-disable-line @typescript-eslint/no-unused-vars
   const [streamingAnalysis, setStreamingAnalysis] = useState('');
-  const [visualizationTrigger, setVisualizationTrigger] = useState<{ type: 'flowchart' | 'mindmap' | null; timestamp?: number }>({ type: null });
+  const [visualizationTrigger, setVisualizationTrigger] = useState<{ type: 'flowchart' | 'mindmap' | null; timestamp?: number }>({ type: null }); // eslint-disable-line @typescript-eslint/no-unused-vars
 
   // Flowchart & Code Navigation States
   const [highlightRange, setHighlightRange] = useState<{ lineStart: number; lineEnd: number; source?: string } | null>(null);
   const [cursorLine, setCursorLine] = useState<number | null>(null);
   const [cursorEndLine, setCursorEndLine] = useState<number | null>(null);
-  const [rightPanelWidth, setRightPanelWidth] = useState<number>(540);
+  const [selectedCode, setSelectedCode] = useState('');
   const [activeRightTab, setActiveRightTab] = useState<'flowchart' | 'mindmap'>('flowchart');
   const [selectedFlowNode, setSelectedFlowNode] = useState<FlowNode | null>(null);
 
@@ -322,6 +322,7 @@ export default function RepoPage() {
     setSelectedFile(file);
     setFileContent('// Loading...');
     setCursorEndLine(null);
+    setSelectedCode('');
 
     try {
       setIsLoadingFile(true);
@@ -460,20 +461,6 @@ export default function RepoPage() {
     }
   };
 
-  const handleGenerateVisualization = (node: FileNode, type: 'flowchart' | 'mindmap') => {
-    // Find the GitHub file in all accumulated files
-    const githubFile = allFiles.find(f => f.path === node.id);
-    if (githubFile && githubFile.type === 'file') {
-      // Ensure file is selected and content is loaded
-      if (!selectedFile || selectedFile.path !== githubFile.path) {
-        handleItemClick(githubFile);
-      }
-      // Trigger visualization generation after a short delay to ensure content is loaded
-      setTimeout(() => {
-        setVisualizationTrigger({ type, timestamp: Date.now() });
-      }, 300);
-    }
-  };
 
   const tabs: EditorTab[] = selectedFile ? [{
     id: selectedFile.path, // Use path instead of sha for consistency
@@ -506,7 +493,58 @@ export default function RepoPage() {
         setSelectedFile(null);
         setFileContent('');
       }}
-      onGenerateVisualization={handleGenerateVisualization}
+      visualizationContent={
+        <div className="h-full flex flex-col overflow-hidden">
+          {/* Tab switcher: Flowchart | Mind Map */}
+          <div className="flex items-center gap-0.5 px-2 py-1 bg-[#1c2128] border-b border-[#30363d] shrink-0">
+            <button
+              onClick={() => setActiveRightTab('flowchart')}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-semibold transition-colors ${
+                activeRightTab === 'flowchart'
+                  ? 'bg-[#1f6feb] text-white'
+                  : 'text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d]'
+              }`}
+            >
+              <Network size={12} />
+              <span>Flowchart</span>
+            </button>
+            <button
+              onClick={() => setActiveRightTab('mindmap')}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-semibold transition-colors ${
+                activeRightTab === 'mindmap'
+                  ? 'bg-[#1f6feb] text-white'
+                  : 'text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d]'
+              }`}
+            >
+              <span>Mind Map</span>
+            </button>
+          </div>
+          {/* Panel body */}
+          <div className="flex-1 overflow-hidden min-h-0">
+            {activeRightTab === 'flowchart' ? (
+              <FlowchartPanel
+                code={selectedFile ? fileContent : null}
+                fileName={selectedFile?.name || null}
+                language={selectedFile ? getLanguage(selectedFile.name) : null}
+                repoFiles={repoContent}
+                owner={owner}
+                repo={repo}
+                cursorLine={cursorLine}
+                cursorEndLine={cursorEndLine}
+                onNavigateToCode={handleNavigateToCode}
+                onNodeSelect={(node) => setSelectedFlowNode(node)}
+              />
+            ) : (
+              <MindMapView
+                selectedFileContent={selectedFile ? fileContent : null}
+                triggerGeneration={visualizationTrigger}
+                fileName={selectedFile?.name || null}
+                language={selectedFile ? getLanguage(selectedFile.name) : null}
+              />
+            )}
+          </div>
+        </div>
+      }
       statusBarProps={{
         language: selectedFile ? getLanguage(selectedFile.name) : 'plaintext',
         branch: 'main',
@@ -521,6 +559,11 @@ export default function RepoPage() {
         }
       } : undefined}
       selectedFlowNode={selectedFlowNode}
+      editorSelection={{
+        lineStart: cursorLine ?? 1,
+        lineEnd: cursorEndLine ?? cursorLine ?? 1,
+        text: selectedCode
+      }}
       code={selectedFile ? fileContent : ''}
       fileName={selectedFile?.name || 'main.py'}
       language={selectedFile ? getLanguage(selectedFile.name) : 'plaintext'}
@@ -537,7 +580,7 @@ export default function RepoPage() {
         )}
 
         {/* AI Analysis Button Bar */}
-        <div className="p-2 border-b border-[#30363d] bg-[#1c2128]">
+        <div className="p-2 border-b border-[#30363d] bg-[#1c2128] shrink-0">
           <button
             onClick={analyzeRepository}
             disabled={isAnalyzing || repoContent.length === 0}
@@ -557,115 +600,33 @@ export default function RepoPage() {
           </button>
         </div>
 
-        {/* --- SPLIT VIEW AREA (Editor + Flowchart/Visualizer) --- */}
-        <div className="flex-1 flex flex-row overflow-hidden relative">
-          
-          {/* LEFT: Code Editor */}
-          <div className="flex-1 flex flex-col border-r border-[#30363d] min-w-0">
-            {selectedFile ? (
-              <CodeEditor
-                code={fileContent}
-                language={getLanguage(selectedFile.name)}
-                height="100%"
-                onChange={(newContent) => {
-                  setFileContent(newContent || '');
-                  if (highlightRange) setHighlightRange(null);
-                }}
-                readOnly={false}
-                highlightRange={highlightRange}
-                onCursorChange={(line) => setCursorLine(line)}
-                onSelectionChange={(start, end) => { setCursorLine(start); setCursorEndLine(end); }}
-              />
-            ) : (
-              <div className="flex items-center justify-center h-full text-center flex-col opacity-50">
-                <Code className="w-16 h-16 text-[#7d8590] mb-4" />
-                <p className="text-[#7d8590]">No file selected</p>
-                <p className="text-xs text-[#7d8590] mt-1">Select a file from the repository explorer</p>
-              </div>
-            )}
-          </div>
-
-          {/* RIGHT: Flowchart & Code Visualization Panel */}
-          <div
-            className="shrink-0 bg-[#0d1117] flex flex-col border-l border-[#30363d] transition-all duration-150"
-            style={{ width: `${rightPanelWidth}px` }}
-          >
-            {/* View Switcher Header (Interactive Flowchart vs Mind Map) */}
-            <div className="flex items-center justify-between px-2.5 py-1.5 bg-[#161b22] border-b border-[#30363d] select-none">
-              {/* Tab buttons */}
-              <div className="flex items-center gap-0.5 bg-[#0d1117] p-0.5 rounded-md border border-[#30363d]/70">
-                <button
-                  onClick={() => setActiveRightTab('flowchart')}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-semibold transition-colors ${
-                    activeRightTab === 'flowchart'
-                      ? 'bg-[#1f6feb] text-white'
-                      : 'text-[#7d8590] hover:text-[#c9d1d9] hover:bg-[#21262d]'
-                  }`}
-                >
-                  <Network size={12} />
-                  <span>Flowchart</span>
-                </button>
-                <button
-                  onClick={() => setActiveRightTab('mindmap')}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-semibold transition-colors ${
-                    activeRightTab === 'mindmap'
-                      ? 'bg-[#21262d] text-white border border-[#30363d]'
-                      : 'text-[#7d8590] hover:text-[#c9d1d9] hover:bg-[#21262d]'
-                  }`}
-                >
-                  <span>Mind Map</span>
-                </button>
-              </div>
-
-              {/* Width Presets */}
-              <div className="flex items-center gap-1">
-                <span className="text-[10px] text-[#484f58] font-medium mr-0.5">Width</span>
-                {([
-                  { w: 420, label: 'S' },
-                  { w: 560, label: 'M' },
-                  { w: 740, label: 'L' },
-                ] as const).map(({ w, label }) => (
-                  <button
-                    key={w}
-                    onClick={() => setRightPanelWidth(w)}
-                    className={`w-6 h-6 flex items-center justify-center rounded text-[10px] font-bold transition-colors ${
-                      rightPanelWidth === w
-                        ? 'bg-[#30363d] text-white'
-                        : 'text-[#7d8590] hover:text-[#c9d1d9] hover:bg-[#21262d]'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
+        {/* Editor */}
+        <div className="flex-1 overflow-hidden min-h-0">
+          {selectedFile ? (
+            <CodeEditor
+              code={fileContent}
+              language={getLanguage(selectedFile.name)}
+              height="100%"
+              onChange={(newContent) => {
+                setFileContent(newContent || '');
+                if (highlightRange) setHighlightRange(null);
+              }}
+              readOnly={false}
+              highlightRange={highlightRange}
+              onCursorChange={(line) => setCursorLine(line)}
+              onSelectionChange={(start, end, text) => {
+                setCursorLine(start);
+                setCursorEndLine(end);
+                setSelectedCode(text ?? '');
+              }}
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full text-center flex-col opacity-50">
+              <Code className="w-16 h-16 text-[#7d8590] mb-4" />
+              <p className="text-[#7d8590]">No file selected</p>
+              <p className="text-xs text-[#7d8590] mt-1">Select a file from the repository explorer</p>
             </div>
-
-            {/* Panel Body */}
-            <div className="flex-1 overflow-hidden">
-              {activeRightTab === 'flowchart' ? (
-                <FlowchartPanel
-                  code={selectedFile ? fileContent : null}
-                  fileName={selectedFile?.name || null}
-                  language={selectedFile ? getLanguage(selectedFile.name) : null}
-                  repoFiles={repoContent}
-                  owner={owner}
-                  repo={repo}
-                  cursorLine={cursorLine}
-                  cursorEndLine={cursorEndLine}
-                  onNavigateToCode={handleNavigateToCode}
-                  onNodeSelect={(node) => setSelectedFlowNode(node)}
-                />
-              ) : (
-                <MindMapView
-                  selectedFileContent={selectedFile ? fileContent : null}
-                  triggerGeneration={visualizationTrigger}
-                  fileName={selectedFile?.name || null}
-                  language={selectedFile ? getLanguage(selectedFile.name) : null}
-                />
-              )}
-            </div>
-          </div>
-
+          )}
         </div>
       </div>
     </IDELayout>
