@@ -147,21 +147,21 @@ export default function AIChatView({
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#1e1e1e] text-[#cccccc] text-xs">
+    <div className="flex flex-col h-full bg-[#0d1117] text-[#e6edf3] text-xs">
       {/* Selected Node Context Banner */}
       {selectedNode && (
-        <div className="px-3 py-2 bg-[#161b22] border-b border-[#30363d] flex items-center justify-between text-xs">
-          <div className="flex items-center gap-1.5 overflow-hidden">
+        <div className="px-3 py-2 bg-[#161b22] border-b border-[#30363d] flex items-center justify-between text-xs shrink-0">
+          <div className="flex items-center gap-2 overflow-hidden min-w-0">
             <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0 animate-pulse" />
-            <span className="font-semibold text-[#58a6ff] shrink-0">Selected Node:</span>
-            <span className="font-mono text-[#c9d1d9] truncate">
+            <span className="font-semibold text-[#58a6ff] shrink-0 text-[11px]">Tutor Context:</span>
+            <span className="font-mono text-[#c9d1d9] truncate text-[11px]">
               {selectedNode.id} ({selectedNode.type})
             </span>
           </div>
           {onClearSelectedNode && (
             <button
               onClick={onClearSelectedNode}
-              className="p-1 hover:text-white text-[#7d8590]"
+              className="p-1 hover:text-white text-[#7d8590] transition-colors rounded hover:bg-[#21262d] shrink-0"
               title="Clear node selection"
             >
               <X size={12} />
@@ -170,25 +170,34 @@ export default function AIChatView({
         </div>
       )}
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-3">
+      {/* Messages Scroll Area */}
+      <div className="flex-1 overflow-y-auto p-3.5 space-y-3 min-h-0">
         {messages.map((m) => (
           <div
             key={m.id}
-            className={`p-2.5 rounded-lg leading-relaxed ${
+            className={`p-3 rounded-lg leading-relaxed text-xs ${
               m.role === 'user'
-                ? 'bg-[#007acc]/20 border border-[#007acc]/40 text-[#ffffff] ml-4'
-                : 'bg-[#252526] border border-[#3c3c3c] text-[#cccccc] mr-2'
+                ? 'bg-[#1f6feb]/15 border border-[#1f6feb]/35 text-[#e6edf3] ml-4'
+                : 'bg-[#161b22] border border-[#30363d] text-[#c9d1d9] mr-2'
             }`}
           >
-            <div className="flex items-center justify-between mb-1 text-[10px] text-[#888888]">
-              <span className="font-semibold flex items-center gap-1">
-                {m.role === 'user' ? 'You' : <><Bot size={11} className="text-[#007acc]" /> CodeMind AI</>}
+            <div className="flex items-center justify-between mb-1.5 text-[10px] text-[#8b949e]">
+              <span className="font-semibold flex items-center gap-1.5">
+                {m.role === 'user' ? (
+                  'You'
+                ) : (
+                  <>
+                    <Bot size={12} className="text-[#58a6ff]" />
+                    <span className="text-[#e6edf3]">CodeMind AI</span>
+                  </>
+                )}
               </span>
-              <span>{m.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+              <span className="font-mono shrink-0">
+                {m.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </span>
             </div>
 
-            <div className="prose prose-invert prose-xs max-w-none text-[#cccccc] break-words">
+            <div className="prose prose-invert prose-xs max-w-none text-[#c9d1d9] break-words whitespace-pre-wrap leading-relaxed">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 components={{
@@ -201,7 +210,7 @@ export default function AIChatView({
                       <div className="relative my-2">
                         <button
                           onClick={() => copyToClipboard(codeString)}
-                          className="absolute right-2 top-2 p-1 rounded bg-[#333333] hover:bg-[#444444] text-[#aaaaaa]"
+                          className="absolute right-2 top-2 p-1 rounded bg-[#21262d] hover:bg-[#30363d] text-[#8b949e] hover:text-[#e6edf3] border border-[#30363d] transition-colors"
                           title="Copy Code"
                         >
                           <Copy size={11} />
@@ -213,8 +222,10 @@ export default function AIChatView({
                           customStyle={{
                             margin: 0,
                             borderRadius: '6px',
-                            background: '#161b22',
+                            background: '#0d1117',
+                            border: '1px solid #30363d',
                             fontSize: '11px',
+                            padding: '10px'
                           }}
                           {...props}
                         >
@@ -222,7 +233,7 @@ export default function AIChatView({
                         </SyntaxHighlighter>
                       </div>
                     ) : (
-                      <code className="bg-[#2d2d2d] px-1 py-0.5 rounded font-mono text-[11px]" {...props}>
+                      <code className="bg-[#21262d] text-[#58a6ff] px-1 py-0.5 rounded font-mono text-[11px] border border-[#30363d]/50" {...props}>
                         {children}
                       </code>
                     );
@@ -235,12 +246,12 @@ export default function AIChatView({
 
             {/* Tools used pill badges */}
             {m.toolsUsed && m.toolsUsed.length > 0 && (
-              <div className="mt-2 pt-1.5 border-t border-[#3c3c3c] flex flex-wrap items-center gap-1">
-                <span className="text-[9px] uppercase tracking-wider text-[#888888] font-semibold">Tools:</span>
+              <div className="mt-2.5 pt-2 border-t border-[#30363d]/60 flex flex-wrap items-center gap-1">
+                <span className="text-[9px] uppercase tracking-wider text-[#8b949e] font-semibold">Tools:</span>
                 {m.toolsUsed.map((tool) => (
                   <span
                     key={tool}
-                    className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-[#1e1e1e] text-[#58a6ff] border border-[#3c3c3c] flex items-center gap-1"
+                    className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-[#0d1117] text-[#58a6ff] border border-[#30363d] flex items-center gap-1"
                   >
                     <Terminal size={9} />
                     {tool}
@@ -251,13 +262,13 @@ export default function AIChatView({
 
             {/* Evidence citations */}
             {m.evidence && m.evidence.length > 0 && (
-              <div className="mt-1.5 space-y-1">
+              <div className="mt-2 space-y-1">
                 {m.evidence.map((ev, i) => (
                   ev.lineStart ? (
                     <button
                       key={i}
                       onClick={() => onNavigateToCode && onNavigateToCode(fileName || 'main.py', ev.lineStart!, ev.lineEnd || ev.lineStart!)}
-                      className="text-[10px] text-[#58a6ff] hover:underline flex items-center gap-1 bg-[#1f6feb]/10 px-1.5 py-0.5 rounded border border-[#1f6feb]/20"
+                      className="text-[10px] text-[#58a6ff] hover:underline flex items-center gap-1 bg-[#1f6feb]/10 px-2 py-0.5 rounded border border-[#1f6feb]/25 transition-colors"
                     >
                       <MapPin size={10} />
                       <span>Line {ev.lineStart}{ev.lineEnd && ev.lineEnd !== ev.lineStart ? `–${ev.lineEnd}` : ''}</span>
@@ -270,8 +281,8 @@ export default function AIChatView({
         ))}
 
         {isLoading && (
-          <div className="p-2.5 bg-[#252526] border border-[#3c3c3c] rounded text-xs flex items-center gap-2 text-[#007acc]">
-            <Loader size={13} className="animate-spin" />
+          <div className="p-3 bg-[#161b22] border border-[#30363d] rounded-lg text-xs flex items-center gap-2 text-[#58a6ff]">
+            <Loader size={14} className="animate-spin text-[#58a6ff]" />
             <span>{selectedNode ? 'Agentic Tutor reasoning with graph tools...' : 'AI thinking...'}</span>
           </div>
         )}
@@ -281,7 +292,7 @@ export default function AIChatView({
 
       {/* Suggested quick chip if node is selected */}
       {selectedNode && (
-        <div className="px-3 py-1.5 border-t border-[#3c3c3c] bg-[#161b22] flex items-center gap-1.5 overflow-x-auto">
+        <div className="px-3 py-1.5 border-t border-[#30363d] bg-[#161b22] flex items-center gap-1.5 overflow-x-auto shrink-0">
           <Sparkles size={11} className="text-[#f59e0b] shrink-0" />
           <button
             onClick={() => handleSend(`Explain node ${selectedNode.id}: why does this step exist in the control flow?`)}
@@ -302,21 +313,23 @@ export default function AIChatView({
         </div>
       )}
 
-      {/* Input */}
-      <div className="p-2.5 border-t border-[#3c3c3c] bg-[#1e1e1e] flex gap-1.5">
+      {/* Anchored Input Area */}
+      <div className="p-3 border-t border-[#30363d] bg-[#161b22] flex gap-2 shrink-0">
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-          placeholder={selectedNode ? `Ask about node ${selectedNode.id}...` : "Ask AI assistant..."}
+          placeholder={selectedNode ? `Ask about node ${selectedNode.id}...` : "Ask CodeMind AI assistant..."}
           disabled={isLoading}
-          className="flex-1 bg-[#2d2d2d] border border-[#3c3c3c] rounded px-2.5 py-1.5 text-xs text-[#ffffff] focus:outline-none focus:border-[#007acc] placeholder-[#888888]"
+          className="flex-1 bg-[#0d1117] border border-[#30363d] rounded-md px-3 py-2 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff]/20 placeholder-[#7d8590] transition-all disabled:opacity-50"
         />
         <button
           onClick={() => handleSend()}
           disabled={isLoading || !input.trim()}
-          className="px-3 py-1.5 bg-[#007acc] hover:bg-[#0098ff] disabled:opacity-50 text-white rounded transition-colors flex items-center justify-center shrink-0"
+          className="px-3.5 py-2 bg-[#1f6feb] hover:bg-[#388bfd] disabled:opacity-40 text-white rounded-md transition-all flex items-center justify-center shrink-0 shadow-sm active:scale-95"
+          title="Send message"
+          aria-label="Send message"
         >
           <Send size={13} />
         </button>
