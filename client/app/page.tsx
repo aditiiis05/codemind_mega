@@ -165,6 +165,7 @@ export default function HomePage() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+<<<<<<< HEAD
           <button
             onClick={() => router.push('/repo/codemind/core')}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#7957FF] to-[#3478FF] hover:from-[#8A6CFF] hover:to-[#4586FF] text-white text-xs font-semibold shadow-[0_0_12px_rgba(121,87,255,0.4)] transition-all"
@@ -172,6 +173,8 @@ export default function HomePage() {
             <Code2 size={13} />
             <span>Launch IDE</span>
           </button>
+=======
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
           {userLogin && (
             <span style={{ fontSize: 13, color: '#8b949e' }}>@{userLogin}</span>
           )}

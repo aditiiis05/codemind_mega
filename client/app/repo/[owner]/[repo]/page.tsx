@@ -88,6 +88,7 @@ export default function RepoPage() {
   const [selectedCode, setSelectedCode] = useState('');
   const [activeRightTab, setActiveRightTab] = useState<'flowchart' | 'mindmap'>('flowchart');
   const [selectedFlowNode, setSelectedFlowNode] = useState<FlowNode | null>(null);
+<<<<<<< HEAD
   const [isDiagramFullscreen, setIsDiagramFullscreen] = useState(false);
 
   useEffect(() => {
@@ -99,6 +100,8 @@ export default function RepoPage() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isDiagramFullscreen]);
+=======
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
 
   // Session ID for AI Chat (starts null; AIChatView uses its own session internally)
   const [sessionId] = useState<string | null>(null);
@@ -316,6 +319,7 @@ export default function RepoPage() {
       if (!path) setIsLoading(true);
       setError('');
       const githubToken = localStorage.getItem('github_token');
+<<<<<<< HEAD
 
       // ── Demo / Local fallback workspace when no token or for demo repo ──
       if (!githubToken || owner === 'demo' || owner === 'codemind') {
@@ -397,6 +401,10 @@ export default function CodeEditor() {
         }
         setIsLoading(false);
         return;
+=======
+      if (!githubToken) {
+        throw new Error('GitHub authentication required. Please sign in with GitHub.');
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
       }
 
       // ── Check sessionStorage cache first ──────────────────────────────────
@@ -444,10 +452,20 @@ export default function CodeEditor() {
       setCachedDir(cacheKey, items);
 
       if (!path) {
+<<<<<<< HEAD
         setRepoContent(items);
         setAllFiles(items);
       } else {
         setDirContents(prev => ({ ...prev, [path]: items }));
+=======
+        // Root level — set as the base repo content
+        setRepoContent(items);
+        setAllFiles(items);
+      } else {
+        // Sub-directory — store under its path key
+        setDirContents(prev => ({ ...prev, [path]: items }));
+        // Also accumulate into allFiles for project analysis
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
         setAllFiles(prev => {
           const existingPaths = new Set(prev.map(f => f.path));
           const newItems = items.filter(f => !existingPaths.has(f.path));
@@ -474,11 +492,18 @@ export default function CodeEditor() {
   }, [fetchRepoContent]);
 
   const fetchFileContent = useCallback(async (file: GitHubFile) => {
+<<<<<<< HEAD
     setSelectedFile(file);
+=======
+    // Set selected file immediately so the editor panel appears with a loading state
+    setSelectedFile(file);
+    setFileContent('// Loading...');
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
     setCursorLine(null);
     setCursorEndLine(null);
     setSelectedCode('');
 
+<<<<<<< HEAD
     // Check embedded mock content if demo file
     if (file.path === 'client/components/CodeEditor.tsx') {
       setFileContent(`import React, { useState, useEffect } from 'react';
@@ -573,13 +598,19 @@ export default function MermaidChart({ chart }: { chart: string }) {
 
     setFileContent('// Loading...');
 
+=======
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
     try {
       setIsLoadingFile(true);
       setError('');
       const githubToken = localStorage.getItem('github_token');
       if (!githubToken) {
+<<<<<<< HEAD
         setFileContent('// Demo File: ' + file.name + '\n// CodeMind AI workspace preview');
         return;
+=======
+        throw new Error('GitHub authentication required');
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
       }
 
       const response = await axios.get(
@@ -737,16 +768,23 @@ export default function MermaidChart({ chart }: { chart: string }) {
         setFileContent('');
       }}
       visualizationContent={
+<<<<<<< HEAD
         <div className={`flex flex-col overflow-hidden bg-[#1e1e1e] ${
           isDiagramFullscreen ? 'fixed inset-0 z-50 shadow-2xl' : 'h-full'
         }`}>
+=======
+        <div className="h-full flex flex-col overflow-hidden">
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
           {/* Main Visualization Header */}
           <VisualizationHeader
             activeTab={activeRightTab}
             onTabChange={setActiveRightTab}
             fileName={selectedFile?.name || null}
+<<<<<<< HEAD
             isFullscreen={isDiagramFullscreen}
             onToggleFullscreen={() => setIsDiagramFullscreen(prev => !prev)}
+=======
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
           />
           {/* Panel body */}
           <div className="flex-1 overflow-hidden min-h-0">
@@ -762,8 +800,11 @@ export default function MermaidChart({ chart }: { chart: string }) {
                 cursorEndLine={cursorEndLine}
                 onNavigateToCode={handleNavigateToCode}
                 onNodeSelect={(node) => setSelectedFlowNode(node)}
+<<<<<<< HEAD
                 isFullscreen={isDiagramFullscreen}
                 onToggleFullscreen={() => setIsDiagramFullscreen(prev => !prev)}
+=======
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
               />
             ) : (
               <MindMapView
@@ -806,8 +847,11 @@ export default function MermaidChart({ chart }: { chart: string }) {
       isAnalyzing={isAnalyzing}
       analysisResult={streamingAnalysis}
       repoAvailable={repoContent.length > 0}
+<<<<<<< HEAD
       repoOwner={owner}
       repoName={repo}
+=======
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
     >
       <div className="h-full flex flex-col overflow-hidden">
         {/* Error Message */}

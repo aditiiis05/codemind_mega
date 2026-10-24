@@ -42,10 +42,15 @@ const verifyGitHubToken = (req, res, next) => {
 // GET /api/github/auth/github-url - Get GitHub OAuth authorization URL
 router.get('/auth/github-url', (req, res) => {
   try {
+<<<<<<< HEAD
     if (!GITHUB_CLIENT_ID || GITHUB_CLIENT_ID === 'your_github_client_id_here') {
       return res.status(500).json({
         error: 'GitHub OAuth Client ID is not configured in server/.env. Please set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET, or use a Personal Access Token / Demo Workspace.'
       });
+=======
+    if (!GITHUB_CLIENT_ID) {
+      return res.status(500).json({ error: 'GitHub Client ID not configured' });
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
     }
 
     const githubOAuthUrl =
@@ -57,7 +62,11 @@ router.get('/auth/github-url', (req, res) => {
     res.json({ url: githubOAuthUrl });
   } catch (err) {
     console.error('[OAuth URL Error]', err);
+<<<<<<< HEAD
     res.status(500).json({ error: 'Failed to generate OAuth URL: ' + (err.message || err) });
+=======
+    res.status(500).json({ error: 'Failed to generate OAuth URL' });
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
   }
 });
 

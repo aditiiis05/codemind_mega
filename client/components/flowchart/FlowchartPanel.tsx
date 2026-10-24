@@ -1,6 +1,11 @@
 // client/components/flowchart/FlowchartPanel.tsx
+<<<<<<< HEAD
 // Main Flowchart Panel integrating File Flow, Function Flow, Project Architecture,
 // real-time AST debounce, non-overlapping bottom IDE terminal dock, and bidirectional Code ↔ Flowchart navigation
+=======
+// Main Flowchart Panel integrating File Flow, Function Flow, Project Flow, real-time debounce,
+// automatic layout, and bidirectional Code ↔ Flowchart navigation
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
 
 'use client';
 
@@ -8,10 +13,16 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import {
   AlertCircle,
   Loader2,
+<<<<<<< HEAD
   FolderGit2,
   RefreshCw,
   Minimize2,
   Network
+=======
+  FileCode,
+  FolderGit2,
+  RefreshCw
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
 } from 'lucide-react';
 import {
   FlowNode,
@@ -46,6 +57,7 @@ interface FlowchartPanelProps {
   cursorEndLine?: number | null;
   onNavigateToCode?: (file: string, lineStart: number, lineEnd?: number) => void;
   onNodeSelect?: (node: FlowNode | null) => void;
+<<<<<<< HEAD
   isFullscreen?: boolean;
   onToggleFullscreen?: () => void;
 }
@@ -81,6 +93,10 @@ const DEFAULT_FLOW_DATA: FlowchartResponse = {
   ]
 };
 
+=======
+}
+
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
 export default function FlowchartPanel({
   code,
   fileName,
@@ -91,9 +107,13 @@ export default function FlowchartPanel({
   cursorLine = null,
   cursorEndLine = null,
   onNavigateToCode,
+<<<<<<< HEAD
   onNodeSelect,
   isFullscreen: externalIsFullscreen,
   onToggleFullscreen: externalOnToggleFullscreen
+=======
+  onNodeSelect
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
 }: FlowchartPanelProps) {
   // View states
   const [viewMode, setViewMode] = useState<FlowchartViewMode>('file');
@@ -103,6 +123,7 @@ export default function FlowchartPanel({
   const [searchQuery, setSearchQuery] = useState('');
   const [zoom, setZoom] = useState(1.0);
   const [showMinimap, setShowMinimap] = useState(true);
+<<<<<<< HEAD
   const [showLegend, setShowLegend] = useState(false);
   const [detailLevel, setDetailLevel] = useState<'overview' | 'standard' | 'detailed'>('standard');
 
@@ -126,6 +147,15 @@ export default function FlowchartPanel({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fileGraphData, setFileGraphData] = useState<FlowchartResponse | null>(DEFAULT_FLOW_DATA);
+=======
+  // Detail level: 'overview' | 'standard' | 'detailed'
+  const [detailLevel, setDetailLevel] = useState<'overview' | 'standard' | 'detailed'>('standard');
+
+  // Analysis and Data states
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [fileGraphData, setFileGraphData] = useState<FlowchartResponse | null>(null);
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
   const [projectGraphData, setProjectGraphData] = useState<ProjectGraphResponse | null>(null);
 
   // Selection mode states
@@ -218,29 +248,49 @@ export default function FlowchartPanel({
     }
   }, [repoFiles, owner, repo]);
 
+<<<<<<< HEAD
   // Track first run for immediate analysis
   const isFirstRunRef = useRef(true);
 
   /**
    * Auto-update flowchart with debounce when code or file changes
+=======
+  /**
+   * Auto-update flowchart with debounce (750ms) when code or file changes
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
    */
   useEffect(() => {
     if (viewMode === 'project') return;
 
     if (!code || !fileName) {
+<<<<<<< HEAD
       return;
     }
 
+=======
+      setFileGraphData(null);
+      return;
+    }
+
+    // Clear previous timer
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
 
+<<<<<<< HEAD
     const delay = isFirstRunRef.current ? 50 : 800;
     isFirstRunRef.current = false;
 
     debounceTimerRef.current = setTimeout(() => {
       fetchFileFlowchart(code, fileName, language || 'plaintext', selectedFunction);
     }, delay);
+=======
+    // Set 1200ms debounce — avoids re-parsing on every keystroke
+    debounceTimerRef.current = setTimeout(() => {
+      fetchFileFlowchart(code, fileName, language || 'plaintext', selectedFunction);
+    }, 1200);
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
 
     return () => {
       if (debounceTimerRef.current) {
@@ -266,7 +316,11 @@ export default function FlowchartPanel({
 
   /**
    * Code to Flowchart interaction:
+<<<<<<< HEAD
    * When cursor line in Monaco moves, find node encompassing that line and highlight it
+=======
+   * When cursor line in editor moves, find the node encompassing that line and highlight it!
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
    */
   useEffect(() => {
     if (cursorLine === null || !fileGraphData?.nodes) {
@@ -295,21 +349,41 @@ export default function FlowchartPanel({
     lastAnalyzedRef.current = null;
   }, [code, fileName]);
 
+<<<<<<< HEAD
   const lastSelectionLineRef = useRef<number | null>(null);
 
   /**
    * Debounced selection fetch: when cursor moves on a non-blank line, trace selection
+=======
+  // Track the last cursor line we sent a selection request for
+  const lastSelectionLineRef = useRef<number | null>(null);
+
+  /**
+   * Debounced selection fetch: when cursor moves on a non-blank line,
+   * call analyzeSelection and switch to selection mode.
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
    */
   useEffect(() => {
     if (cursorLine === null || !code || !language || !fileName) return;
     if (viewMode === 'project') return;
 
+<<<<<<< HEAD
     if (lastSelectionLineRef.current === cursorLine) return;
 
+=======
+    // Skip if cursor is on the same line as last request
+    if (lastSelectionLineRef.current === cursorLine) return;
+
+    // Skip blank lines
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
     const lines = code.split('\n');
     const lineContent = lines[cursorLine - 1];
     if (lineContent === undefined || lineContent.trim() === '') return;
 
+<<<<<<< HEAD
+=======
+    // Debounce — 800ms so rapid cursor movement doesn't spam the backend
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
     if (selectionDebounceRef.current) clearTimeout(selectionDebounceRef.current);
     selectionDebounceRef.current = setTimeout(async () => {
       lastSelectionLineRef.current = cursorLine;
@@ -328,7 +402,11 @@ export default function FlowchartPanel({
           setIsSelectionMode(true);
         }
       } catch {
+<<<<<<< HEAD
         // Silently fall back to file graph
+=======
+        // Silently fall back to file graph — do not show error
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
       } finally {
         setIsSelectionLoading(false);
       }
@@ -341,7 +419,11 @@ export default function FlowchartPanel({
 
   /**
    * Flowchart to Code interaction:
+<<<<<<< HEAD
    * When user clicks a flowchart node, open bottom terminal dock and navigate Monaco editor!
+=======
+   * When user clicks a flowchart node, navigate Monaco editor to lineStart!
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
    */
   const handleNodeClick = (node: FlowNode) => {
     setSelectedNodeId(node.id);
@@ -358,22 +440,46 @@ export default function FlowchartPanel({
   };
 
   /**
+<<<<<<< HEAD
    * Compute layout for File / Function flow nodes
    */
   const currentControlFlowLayout = useMemo(() => {
     const rawData = (isSelectionMode && selectionFlowData) ? selectionFlowData : fileGraphData;
     const activeGraphData = (rawData?.nodes && rawData.nodes.length > 0) ? rawData : DEFAULT_FLOW_DATA;
+=======
+   * Compute layout for current File / Function flow nodes
+   */
+  const currentControlFlowLayout = useMemo(() => {
+    const activeGraphData = (isSelectionMode && selectionFlowData) ? selectionFlowData : fileGraphData;
+
+    if (!activeGraphData?.nodes) {
+      return { nodes: [], edges: [], bounds: { minX: 0, minY: 0, maxX: 600, maxY: 400, width: 600, height: 400 } };
+    }
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
 
     let nodesToLayout = activeGraphData.nodes;
     let edgesToLayout = activeGraphData.edges;
 
+<<<<<<< HEAD
     // Detail level filtering
+=======
+    // ── Detail level filtering ──────────────────────────────────────────────
+    // Overview: only structural nodes (START, END, FUNCTION, DECISION, LOOP)
+    // Standard: all except pure PROCESS nodes that are very minor (default)
+    // Detailed: everything
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
     if (detailLevel === 'overview') {
       const keepTypes = new Set(['START', 'END', 'FUNCTION', 'DECISION', 'LOOP', 'ERROR']);
       nodesToLayout = nodesToLayout.filter(n => keepTypes.has(n.type));
     }
+<<<<<<< HEAD
 
     // Filter pill filtering
+=======
+    // standard and detailed use all nodes
+
+    // ── Filter bar filtering ────────────────────────────────────────────────
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
     if (filter !== 'ALL') {
       if (filter === 'DECISIONS') {
         nodesToLayout = nodesToLayout.filter(n => n.type === 'DECISION');
@@ -384,7 +490,11 @@ export default function FlowchartPanel({
       }
     }
 
+<<<<<<< HEAD
     // Keep only edges where both source and target are in the visible node set
+=======
+    // Keep only edges where both source and target are still in the node set
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
     const visibleIds = new Set(nodesToLayout.map(n => n.id));
     edgesToLayout = edgesToLayout.filter(
       e => visibleIds.has(e.source) && visibleIds.has(e.target)
@@ -420,7 +530,11 @@ export default function FlowchartPanel({
     };
   }, [viewMode, fileGraphData, projectGraphData, isSelectionMode, selectionFlowData]);
 
+<<<<<<< HEAD
   // Canvas ref for fit-to-screen & centerNode
+=======
+  // Canvas ref for fit-to-screen
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
   const canvasRef = useRef<FlowchartCanvasHandle>(null);
 
   // Zoom handlers
@@ -430,6 +544,7 @@ export default function FlowchartPanel({
   const handleFitToScreen = () => canvasRef.current?.fitToScreen();
 
   return (
+<<<<<<< HEAD
     <div className={`flex flex-col bg-[#1e1e1e] text-[#cccccc] overflow-hidden select-none relative ${
       isFullscreen ? 'fixed inset-0 z-50 shadow-2xl' : 'h-full'
     }`}>
@@ -464,6 +579,11 @@ export default function FlowchartPanel({
       )}
 
       {/* Flow Toolbar — Structured controls with View, Detail, Filters, Zoom, Search */}
+=======
+    <div className="h-full flex flex-col bg-[#0d1117] text-[#e6edf3] overflow-hidden select-none">
+
+      {/* Flow Toolbar — compact 2-row controls with View, Detail, and Filters dropdowns */}
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
       <FlowToolbar
         viewMode={viewMode}
         onViewModeChange={handleViewModeChange}
@@ -500,6 +620,7 @@ export default function FlowchartPanel({
         activeFilter={filter}
         onFilterChange={setFilter}
         counts={filterCounts}
+<<<<<<< HEAD
         onResetLayout={() => canvasRef.current?.resetLayout()}
         isFullscreen={isFullscreen}
         onToggleFullscreen={toggleFullscreen}
@@ -626,6 +747,135 @@ export default function FlowchartPanel({
 
       {/* Floating On-Demand Symbol Legend Popover */}
       <FlowLegend isOpen={showLegend} onClose={() => setShowLegend(false)} />
+=======
+      />
+
+      {/* Main Canvas Area */}
+      <div className="flex-1 min-h-0 relative overflow-hidden">
+        {isLoading && !fileGraphData && !projectGraphData ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0d1117] text-[#7d8590] gap-3">
+            <Loader2 size={32} className="text-[#58a6ff] animate-spin" />
+            <div className="text-center">
+              <p className="text-sm font-semibold text-[#e6edf3]">Analyzing code structure...</p>
+              <p className="text-xs text-[#7d8590] mt-1">Generating control flow graph and decision nodes</p>
+            </div>
+          </div>
+        ) : error ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center p-6 bg-[#0d1117] text-center">
+            <div className="p-3 rounded-full bg-red-500/10 text-red-400 mb-3 border border-red-500/30">
+              <AlertCircle size={28} />
+            </div>
+            <h3 className="text-sm font-bold text-red-400 mb-1">Flowchart Generation Notice</h3>
+            <p className="text-xs text-[#7d8590] max-w-md mb-4">{error}</p>
+            <button
+              onClick={() => {
+                if (viewMode === 'project') {
+                  fetchProjectFlowchart();
+                } else if (code && fileName) {
+                  fetchFileFlowchart(code, fileName, language || 'plaintext', selectedFunction);
+                }
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-[#e6edf3] rounded text-xs font-semibold transition-all border border-[#30363d]"
+            >
+              <RefreshCw size={13} />
+              <span>Retry Analysis</span>
+            </button>
+          </div>
+        ) : viewMode === 'project' ? (
+          projectGraphData && projectGraphData.nodes.length > 0 ? (
+            <ProjectGraph
+              nodes={projectGraphData.nodes}
+              edges={projectGraphData.edges}
+              graphLevel={graphLevel}
+              filter={filter}
+              searchQuery={searchQuery}
+              zoom={zoom}
+              onZoomChange={setZoom}
+              selectedNodeId={selectedNodeId}
+              onNodeClick={handleNodeClick}
+              showMinimap={showMinimap}
+            />
+          ) : (
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-[#7d8590] p-6 text-center">
+              <FolderGit2 size={36} className="text-[#30363d] mb-3" />
+              <p className="text-sm font-semibold text-[#e6edf3]">Project Architecture Graph</p>
+              <p className="text-xs text-[#7d8590] max-w-sm mt-1">
+                Click &quot;Run Project Flow&quot; to inspect inter-file dependencies and cross-module calls.
+              </p>
+              <button
+                onClick={fetchProjectFlowchart}
+                className="mt-4 px-3.5 py-1.5 bg-[#238636] hover:bg-[#2ea043] text-white rounded text-xs font-semibold transition-all"
+              >
+                Analyze Project
+              </button>
+            </div>
+          )
+        ) : currentControlFlowLayout.nodes.length > 0 ? (
+          <div className="relative w-full h-full">
+            {/* Selection mode badge */}
+            {isSelectionMode && (
+              <div className="absolute top-2 left-2 z-20 flex items-center gap-1.5 bg-[#1f6feb]/20 border border-[#1f6feb]/40 text-[#58a6ff] text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                <span>Selection Mode</span>
+                <button
+                  onClick={() => { setIsSelectionMode(false); setSelectionFlowData(null); }}
+                  className="hover:text-white transition-colors"
+                  aria-label="Exit selection mode"
+                >
+                  ×
+                </button>
+              </div>
+            )}
+            {/* Selection loading indicator (small spinner, non-blocking) */}
+            {isSelectionLoading && (
+              <div className="absolute top-2 right-2 z-20">
+                <Loader2 size={14} className="text-[#58a6ff] animate-spin" />
+              </div>
+            )}
+            <FlowchartCanvas
+              ref={canvasRef}
+              nodes={currentControlFlowLayout.nodes}
+              edges={currentControlFlowLayout.edges}
+              bounds={currentControlFlowLayout.bounds}
+              zoom={zoom}
+              onZoomChange={setZoom}
+              selectedNodeId={selectedNodeId}
+              highlightedNodeId={highlightedNodeId}
+              searchQuery={searchQuery}
+              showMinimap={showMinimap}
+              onNodeClick={handleNodeClick}
+            />
+            {/* Node detail panel — slides in from the right */}
+            {showDetailPanel && selectedNode && (
+              <NodeDetailPanel
+                node={selectedNode}
+                allEdges={currentControlFlowLayout.edges}
+                allNodes={currentControlFlowLayout.nodes}
+                code={code}
+                fileName={fileName}
+                language={language}
+                sessionId={fileGraphData?.sessionId}
+                onClose={() => {
+                  setShowDetailPanel(false);
+                  if (onNodeSelect) onNodeSelect(null);
+                }}
+                onNavigateToCode={onNavigateToCode}
+              />
+            )}
+          </div>
+        ) : (
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-[#7d8590] p-6 text-center">
+            <FileCode size={36} className="text-[#30363d] mb-3" />
+            <p className="text-sm font-semibold text-[#e6edf3]">No Flowchart Available</p>
+            <p className="text-xs text-[#7d8590] max-w-xs mt-1">
+              Select a file from the repository file tree on the left to view its execution flow.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Collapsible Symbol Legend */}
+      <FlowLegend />
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
     </div>
   );
 }

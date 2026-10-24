@@ -1,8 +1,14 @@
 'use client';
 
+<<<<<<< HEAD
 import { useState, useRef, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import axios from 'axios';
+=======
+import { useState, useRef, useEffect } from "react";
+import dynamic from 'next/dynamic';
+import axios from "axios";
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
 import { Sparkles, X, Check, AlertCircle, Loader2 } from 'lucide-react';
 
 // Dynamically import the Monaco editor with no SSR
@@ -11,18 +17,29 @@ const Editor = dynamic(
   { 
     ssr: false,
     loading: () => (
+<<<<<<< HEAD
       <div className="flex flex-col items-center justify-center h-full bg-[#1e1e1e] text-[#cccccc] gap-3">
         <Loader2 className="w-6 h-6 text-[#007acc] animate-spin" />
         <span className="text-xs font-mono text-[#858585]">Loading Monaco Editor...</span>
+=======
+      <div className="flex items-center justify-center h-full bg-[#0d1117]">
+        <Loader2 className="w-6 h-6 text-blue-400 animate-spin" />
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
       </div>
     )
   }
 );
 
+<<<<<<< HEAD
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4000';
 
 import { useTheme } from '@/contexts/ThemeContext';
 
+=======
+// Get API base URL from environment or use default
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4000';
+
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
 type Props = {
   code: string;
   language: string;
@@ -37,18 +54,26 @@ type Props = {
 const CodeEditor = ({
   code,
   language,
+<<<<<<< HEAD
   height: _height = "100%", // eslint-disable-line @typescript-eslint/no-unused-vars
+=======
+  height: _height = "70vh", // eslint-disable-line @typescript-eslint/no-unused-vars
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
   onChange,
   readOnly = false,
   highlightRange = null,
   onCursorChange,
   onSelectionChange
 }: Props) => {
+<<<<<<< HEAD
   const { fontSize, lineNumbers, minimap } = useTheme();
+=======
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
   const [suggestion, setSuggestion] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [showSuggestion, setShowSuggestion] = useState(false);
+<<<<<<< HEAD
   const [monacoLoaded] = useState(true);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -56,6 +81,8 @@ const CodeEditor = ({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const monacoRef = useRef<any>(null);
   const decorationsRef = useRef<string[]>([]);
+=======
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
 
   const handleSuggest = async () => {
     if (!code.trim()) {
@@ -69,10 +96,18 @@ const CodeEditor = ({
     setShowSuggestion(true);
 
     try {
+<<<<<<< HEAD
       const response = await axios.post(
         `${API_BASE_URL}/api/ai/complete`,
         { 
           code: code,
+=======
+      // FIXED: Send proper request body matching backend expectations
+      const response = await axios.post(
+        `${API_BASE_URL}/api/ai/complete`,
+        { 
+          code: code,  // Backend expects 'prompt' not 'code'
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
           language: language || 'javascript'
         },
         { 
@@ -84,6 +119,10 @@ const CodeEditor = ({
       if (response.data && response.data.suggestion) {
         setSuggestion(response.data.suggestion);
       } else if (response.data && response.data.completion) {
+<<<<<<< HEAD
+=======
+        // Some backends return 'completion' instead
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
         setSuggestion(response.data.completion);
       } else if (response.data && response.data.error) {
         throw new Error(response.data.error);
@@ -93,12 +132,37 @@ const CodeEditor = ({
     } catch (err: unknown) {
       console.error("AI Suggestion Error:", err);
       let errorMessage = "Failed to get AI suggestions.";
+<<<<<<< HEAD
       if (err && typeof err === 'object' && 'code' in err && (err as { code: string }).code === 'ERR_NETWORK') {
         errorMessage = "⚠️ Cannot connect to AI service. Ensure server is running on port 4000.";
       } else if (err && typeof err === 'object' && 'response' in err) {
         const axiosErr = err as { response?: { data?: { error?: string; message?: string } } };
         errorMessage = axiosErr.response?.data?.error || axiosErr.response?.data?.message || errorMessage;
       }
+=======
+
+      if (err && typeof err === 'object' && 'code' in err && (err as { code: string }).code === 'ERR_NETWORK') {
+        errorMessage = "⚠️ Cannot connect to AI service. Please ensure the server is running on port 4000.\n\nRun: cd server && npm start";
+      } else if (err && typeof err === 'object' && 'response' in err) {
+        const axiosErr = err as { response?: { data?: { error?: string; message?: string; details?: string; suggestion?: string }; status?: number }; request?: unknown; code?: string; message?: string };
+        const { data, status } = axiosErr.response || {};
+        if (status === 400) {
+          errorMessage = `⚠️ Bad Request: ${data?.error || data?.message || 'Invalid request format'}`;
+          if (data?.details) errorMessage += `\n\nDetails: ${data.details}`;
+        } else {
+          errorMessage = data?.error || data?.message || errorMessage;
+          if (data?.details) errorMessage += `\n${data.details}`;
+        }
+        if (data?.suggestion) errorMessage += `\n\n💡 Tip: ${data.suggestion}`;
+      } else if (err && typeof err === 'object' && 'request' in err) {
+        errorMessage = "⚠️ No response from AI service. Check if the server is running.";
+      } else if (err && typeof err === 'object' && 'code' in err && (err as { code: string }).code === 'ECONNABORTED') {
+        errorMessage = "⏱️ Request timed out. The AI service is taking too long.";
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
       setError(errorMessage);
     } finally {
       setIsLoading(false);
@@ -106,15 +170,23 @@ const CodeEditor = ({
   };
 
   const applySuggestion = () => {
+<<<<<<< HEAD
     if (suggestion && onChange) {
       const newCode = code + '\n' + suggestion;
       onChange(newCode);
       setShowSuggestion(false);
       setSuggestion("");
+=======
+    if (onChange && suggestion) {
+      onChange(code + "\n" + suggestion);
+      setSuggestion("");
+      setShowSuggestion(false);
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
     }
   };
 
   const dismissSuggestion = () => {
+<<<<<<< HEAD
     setShowSuggestion(false);
     setSuggestion("");
     setError("");
@@ -128,11 +200,33 @@ const CodeEditor = ({
 
     if (!highlightRange) {
       if (decorationsRef.current.length) {
+=======
+    setSuggestion("");
+    setShowSuggestion(false);
+    setError("");
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const editorRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const monacoRef = useRef<any>(null);
+  const decorationsRef = useRef<string[]>([]);
+
+  // Navigate and highlight lines when highlightRange updates
+  useEffect(() => {
+    if (!editorRef.current || !monacoRef.current) return;
+    const editor = editorRef.current;
+    const monaco = monacoRef.current;
+
+    if (!highlightRange) {
+      if (decorationsRef.current.length > 0) {
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
         decorationsRef.current = editor.deltaDecorations(decorationsRef.current, []);
       }
       return;
     }
 
+<<<<<<< HEAD
     const start = Math.max(1, highlightRange.lineStart);
     const end = Math.max(start, highlightRange.lineEnd);
 
@@ -160,19 +254,54 @@ const CodeEditor = ({
     applyHighlights();
   }, [applyHighlights]);
 
+=======
+    const startLine = Math.max(1, highlightRange.lineStart);
+    const endLine = Math.max(startLine, highlightRange.lineEnd || startLine);
+
+    // Scroll line smoothly into view center
+    editor.revealLineInCenter(startLine);
+
+    // Select the range in editor
+    editor.setSelection(new monaco.Selection(startLine, 1, endLine, 1000));
+
+    // Apply high-visibility line highlight
+    decorationsRef.current = editor.deltaDecorations(decorationsRef.current, [
+      {
+        range: new monaco.Range(startLine, 1, endLine, 1000),
+        options: {
+          isWholeLine: true,
+          className: 'codemind-flowchart-line-highlight',
+          overviewRuler: {
+            color: '#0ea5e9',
+            position: monaco.editor.OverviewRulerLane.Full
+          }
+        }
+      }
+    ]);
+  }, [highlightRange]);
+
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleEditorDidMount = (editor: any, monaco: any) => {
     editorRef.current = editor;
     monacoRef.current = monaco;
 
+<<<<<<< HEAD
     // Use standard Visual Studio Dark theme
     monaco.editor.setTheme('vs-dark');
 
+=======
+    // Listen to cursor movement to inform parent / flowchart
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     editor.onDidChangeCursorPosition((e: any) => {
       onCursorChange?.(e.position.lineNumber);
     });
 
+<<<<<<< HEAD
+=======
+    // Listen to selection change for multi-line range
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     editor.onDidChangeCursorSelection((e: any) => {
       const sel = e.selection;
@@ -196,6 +325,7 @@ const CodeEditor = ({
         onSelectionChange(sel.startLineNumber, sel.endLineNumber, selectedText);
       }
     });
+<<<<<<< HEAD
 
     applyHighlights();
   };
@@ -219,11 +349,66 @@ const CodeEditor = ({
             <>
               <Sparkles size={12} />
               <span>AI Suggest</span>
+=======
+    
+    // Configure Monaco theme
+    monaco.editor.defineTheme('codemind-dark', {
+      base: 'vs-dark',
+      inherit: true,
+      rules: [],
+      colors: {
+        'editor.background': '#0d1117',
+        'editor.foreground': '#e6edf3',
+        'editorLineNumber.foreground': '#7d8590',
+        'editor.selectionBackground': '#1f6feb',
+        'editor.inactiveSelectionBackground': '#1f6feb33',
+        'editorCursor.foreground': '#58a6ff',
+        'editor.lineHighlightBackground': '#161b2233',
+      }
+    });
+
+    monaco.editor.setTheme('codemind-dark');
+  };
+
+  return (
+    <div className="h-full flex flex-col bg-[#0d1117] border border-[#30363d] relative">
+      <style jsx global>{`
+        .codemind-flowchart-line-highlight {
+          background-color: rgba(14, 165, 233, 0.25) !important;
+          border-left: 3px solid #0ea5e9 !important;
+          animation: pulseHighlight 2s ease-in-out infinite alternate;
+        }
+        @keyframes pulseHighlight {
+          0% { background-color: rgba(14, 165, 233, 0.2); }
+          100% { background-color: rgba(14, 165, 233, 0.4); }
+        }
+      `}</style>
+      {/* Toolbar */}
+      <div className="flex items-center justify-between px-4 py-2 border-b border-[#30363d] bg-[#161b22]">
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-[#7d8590] font-mono">{language}</span>
+        </div>
+        <button
+          onClick={handleSuggest}
+          disabled={isLoading || readOnly || !code.trim()}
+          className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:from-gray-600 disabled:to-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded text-xs font-semibold transition-all"
+        >
+          {isLoading ? (
+            <>
+              <Loader2 size={14} className="animate-spin" />
+              Analyzing...
+            </>
+          ) : (
+            <>
+              <Sparkles size={14} />
+              Get AI Suggestion
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
             </>
           )}
         </button>
       </div>
 
+<<<<<<< HEAD
       {/* Editor Main Canvas */}
       <div className="flex-1 overflow-hidden relative">
         {monacoLoaded ? (
@@ -301,10 +486,48 @@ const CodeEditor = ({
             <button
               onClick={dismissSuggestion}
               className="text-[#858585] hover:text-[#ffffff] transition-colors"
+=======
+      {/* Editor */}
+      <div className="flex-1 overflow-hidden">
+        <Editor
+          height="100%"
+          language={language}
+          value={code}
+          onChange={(value) => onChange?.(value)}
+          onMount={handleEditorDidMount}
+          options={{
+            minimap: { enabled: false },
+            fontSize: 14,
+            fontFamily: "'Monaco', 'Menlo', 'Ubuntu Mono', monospace",
+            lineNumbers: 'on',
+            wordWrap: 'on',
+            scrollBeyondLastLine: false,
+            readOnly: readOnly,
+            theme: 'codemind-dark',
+            formatOnPaste: true,
+            formatOnType: true,
+            autoClosingBrackets: 'always',
+            autoClosingQuotes: 'always',
+            automaticLayout: true,
+          }}
+        />
+      </div>
+
+      {/* Error Message */}
+      {error && (
+        <div className="px-4 py-3 bg-red-500/10 border-t border-red-500/50 text-red-300 text-sm whitespace-pre-wrap font-mono">
+          <div className="flex items-start gap-2">
+            <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
+            <div className="flex-1">{error}</div>
+            <button
+              onClick={() => setError("")}
+              className="text-red-300 hover:text-red-200"
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
             >
               <X size={14} />
             </button>
           </div>
+<<<<<<< HEAD
 
           <pre className="text-xs text-[#9cdcfe] font-mono mb-3 bg-[#1e1e1e] p-3 rounded border border-[#3c3c3c] overflow-x-auto max-h-48 whitespace-pre-wrap">
             {suggestion}
@@ -323,6 +546,42 @@ const CodeEditor = ({
             >
               <Check size={13} />
               <span>Apply Suggestion</span>
+=======
+        </div>
+      )}
+
+      {/* Suggestion Panel */}
+      {showSuggestion && suggestion && (
+        <div className="px-4 py-3 bg-blue-500/10 border-t border-blue-500/50 max-h-48 overflow-y-auto">
+          <div className="flex items-start justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <Sparkles size={14} className="text-blue-300" />
+              <p className="text-xs font-semibold text-blue-300">AI Suggestion</p>
+            </div>
+            <button
+              onClick={dismissSuggestion}
+              className="text-blue-300 hover:text-blue-200 transition-colors"
+            >
+              <X size={14} />
+            </button>
+          </div>
+          <pre className="text-xs text-blue-100 font-mono mb-3 bg-[#0d1117] p-3 rounded border border-blue-500/30 overflow-x-auto">
+            {suggestion}
+          </pre>
+          <div className="flex gap-2">
+            <button
+              onClick={applySuggestion}
+              className="flex items-center gap-1 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded text-xs font-semibold transition-all"
+            >
+              <Check size={14} />
+              Apply
+            </button>
+            <button
+              onClick={dismissSuggestion}
+              className="px-3 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-[#e6edf3] rounded text-xs font-semibold transition-all border border-[#30363d]"
+            >
+              Dismiss
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
             </button>
           </div>
         </div>

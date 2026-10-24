@@ -59,6 +59,7 @@ const STATUS_LABEL: Record<PlaybackStatus, string> = {
 };
 
 const STATUS_COLOR: Record<PlaybackStatus, string> = {
+<<<<<<< HEAD
   idle: 'bg-[#252526] text-[#858585] border border-[#3c3c3c]',
   generating: 'bg-[#0e639c]/20 text-[#75beff] border border-[#0e639c]/40',
   ready: 'bg-[#73c991]/20 text-[#73c991] border border-[#73c991]/40',
@@ -66,6 +67,15 @@ const STATUS_COLOR: Record<PlaybackStatus, string> = {
   paused: 'bg-[#cca700]/20 text-[#cca700] border border-[#cca700]/40',
   stopped: 'bg-[#252526] text-[#858585] border border-[#3c3c3c]',
   error: 'bg-[#5a1d1d]/40 text-[#f14c4c] border border-[#f14c4c]/40'
+=======
+  idle: 'bg-[#21262d] text-[#8b949e] border border-[#30363d]',
+  generating: 'bg-[#1f6feb]/20 text-[#58a6ff] border border-[#1f6feb]/40',
+  ready: 'bg-[#238636]/20 text-[#3fb950] border border-[#238636]/40',
+  speaking: 'bg-[#1f6feb]/20 text-[#58a6ff] border border-[#1f6feb]/40',
+  paused: 'bg-[#d29922]/20 text-[#d29922] border border-[#d29922]/40',
+  stopped: 'bg-[#21262d] text-[#8b949e] border border-[#30363d]',
+  error: 'bg-[#da3633]/20 text-[#f85149] border border-[#da3633]/40'
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
 };
 
 export default function VoiceExplanation({
@@ -300,6 +310,7 @@ export default function VoiceExplanation({
       : null;
 
   const btnBase =
+<<<<<<< HEAD
     'flex items-center justify-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors border disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer';
   const btnPrimary = `${btnBase} bg-[#0e639c] hover:bg-[#1177bb] border-[#0e639c] text-white`;
   const btnSecondary = `${btnBase} bg-[#2d2d2d] hover:bg-[#383838] border-[#3c3c3c] text-[#cccccc] hover:text-white px-2.5`;
@@ -311,15 +322,35 @@ export default function VoiceExplanation({
       <div className="flex items-center justify-between px-3 py-2 shrink-0 bg-[#252526] border-b border-[#2b2b2b]">
         {/* Language toggle */}
         <div className="flex bg-[#1e1e1e] border border-[#3c3c3c] rounded p-0.5">
+=======
+    'flex items-center justify-center gap-1 px-2 py-1.5 rounded text-[11px] font-semibold transition-colors border disabled:opacity-40 disabled:cursor-not-allowed';
+  const btnPrimary = `${btnBase} bg-[#238636] hover:bg-[#2ea043] border-[#238636] text-white`;
+  const btnSecondary = `${btnBase} bg-[#21262d] hover:bg-[#30363d] border-[#30363d] text-[#e6edf3]`;
+
+  return (
+    <div className="flex flex-col h-full bg-[#0d1117] text-[#e6edf3] text-xs overflow-hidden">
+
+      {/* Fix 1D: Status badge + language toggle on same row (header removed) */}
+      <div className="flex items-center justify-between px-3 py-2 shrink-0">
+        {/* Language toggle */}
+        <div className="flex bg-[#0d1117] border border-[#30363d] rounded p-0.5">
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
           <button
             type="button"
             onClick={() => setExplainLanguage('en')}
             aria-pressed={explainLanguage === 'en'}
             aria-label="Explain in English"
+<<<<<<< HEAD
             className={`px-2.5 py-1 rounded text-xs font-medium transition-colors cursor-pointer ${
               explainLanguage === 'en'
                 ? 'bg-[#0e639c] text-white'
                 : 'text-[#858585] hover:text-white hover:bg-[#2a2d2e]'
+=======
+            className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-colors ${
+              explainLanguage === 'en'
+                ? 'bg-[#1f6feb] text-white'
+                : 'text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d]'
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
             }`}
           >
             English
@@ -329,10 +360,17 @@ export default function VoiceExplanation({
             onClick={() => setExplainLanguage('hi')}
             aria-pressed={explainLanguage === 'hi'}
             aria-label="Explain in Hindi"
+<<<<<<< HEAD
             className={`px-2.5 py-1 rounded text-xs font-medium transition-colors cursor-pointer ${
               explainLanguage === 'hi'
                 ? 'bg-[#0e639c] text-white'
                 : 'text-[#858585] hover:text-white hover:bg-[#2a2d2e]'
+=======
+            className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-colors ${
+              explainLanguage === 'hi'
+                ? 'bg-[#1f6feb] text-white'
+                : 'text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d]'
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
             }`}
           >
             हिन्दी
@@ -341,7 +379,11 @@ export default function VoiceExplanation({
 
         {/* Status badge */}
         <span
+<<<<<<< HEAD
           className={`px-2 py-0.5 rounded text-[10px] font-mono ${STATUS_COLOR[playbackStatus]}`}
+=======
+          className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${STATUS_COLOR[playbackStatus]}`}
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
         >
           {speaking && !paused ? (
             <span className="flex items-center gap-1">
@@ -356,28 +398,48 @@ export default function VoiceExplanation({
 
       {/* Unsupported browser warning */}
       {!supported && (
+<<<<<<< HEAD
         <div className="mx-3 mt-2 flex items-start gap-2 p-2 rounded bg-[#5a1d1d]/40 border border-[#f14c4c]/40 text-[#f14c4c] shrink-0">
           <AlertCircle size={13} className="shrink-0 mt-0.5" />
           <span>
             Your browser does not support speech synthesis.
+=======
+        <div className="mx-3 mb-2 flex items-start gap-2 p-2.5 rounded bg-[#da3633]/10 border border-[#da3633]/40 text-[#f85149] shrink-0">
+          <AlertCircle size={13} className="shrink-0 mt-0.5" />
+          <span>
+            Your browser does not support speech synthesis. You can still get a
+            text explanation, but playback is unavailable.
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
           </span>
         </div>
       )}
 
       {/* Explain button — full width */}
+<<<<<<< HEAD
       <div className="p-3 shrink-0">
+=======
+      <div className="px-3 pb-2 shrink-0">
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
         <button
           type="button"
           onClick={handleExplain}
           disabled={!hasContext || isLoading}
+<<<<<<< HEAD
           className="w-full h-[32px] flex items-center justify-center gap-2 px-3 rounded text-xs font-medium transition-colors bg-[#0e639c] hover:bg-[#1177bb] border border-[#0e639c] text-white disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+=======
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded text-[11px] font-semibold transition-colors bg-[#1f6feb] hover:bg-[#388bfd] border border-[#1f6feb] text-white disabled:opacity-40 disabled:cursor-not-allowed"
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
         >
           {isLoading ? (
             <Loader2 size={13} className="animate-spin" />
           ) : (
             <Languages size={13} />
           )}
+<<<<<<< HEAD
           <span>{isLoading ? 'Generating Audio Walkthrough…' : 'Generate Voice Walkthrough'}</span>
+=======
+          {isLoading ? 'Generating…' : 'Explain Selected Code'}
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
         </button>
       </div>
 
@@ -410,9 +472,15 @@ export default function VoiceExplanation({
       )}
 
       {/* Explanation (scrollable) */}
+<<<<<<< HEAD
       <div className="flex-1 min-h-0 overflow-y-auto px-3 py-2 ide-scrollbar">
         {explanation ? (
           <div className="whitespace-pre-wrap break-words text-[#cccccc] leading-relaxed p-3 rounded bg-[#252526] border border-[#3c3c3c] text-xs font-mono">
+=======
+      <div className="flex-1 min-h-0 overflow-y-auto px-3 py-2">
+        {explanation ? (
+          <div className="whitespace-pre-wrap break-words text-[#c9d1d9] leading-relaxed p-2.5 rounded bg-[#0d1117] border border-[#30363d]">
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
             {explanation}
           </div>
         ) : null}
@@ -420,6 +488,7 @@ export default function VoiceExplanation({
 
       {/* No matching voice warning */}
       {noVoiceWarning && (
+<<<<<<< HEAD
         <div className="mx-3 mb-2 flex items-start gap-2 p-2 rounded bg-[#cca700]/15 border border-[#cca700]/40 text-[#cca700] shrink-0">
           <AlertCircle size={13} className="shrink-0 mt-0.5" />
           <span className="break-words text-xs">{noVoiceWarning}</span>
@@ -427,11 +496,21 @@ export default function VoiceExplanation({
       )}
 
       {/* Playback Settings */}
+=======
+        <div className="mx-3 mb-2 flex items-start gap-2 p-2.5 rounded bg-[#d29922]/10 border border-[#d29922]/40 text-[#d29922] shrink-0">
+          <AlertCircle size={13} className="shrink-0 mt-0.5" />
+          <span className="break-words">{noVoiceWarning}</span>
+        </div>
+      )}
+
+      {/* Fix 1D: Collapsible Playback Settings */}
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
       {supported && (
         <div className="px-3 mb-2 shrink-0">
           <button
             type="button"
             onClick={() => setShowPlaybackSettings(prev => !prev)}
+<<<<<<< HEAD
             className="flex items-center gap-1 text-[11px] font-medium text-[#858585] hover:text-white transition-colors w-full py-1 cursor-pointer"
             aria-expanded={showPlaybackSettings}
           >
@@ -445,13 +524,32 @@ export default function VoiceExplanation({
                 <label className="flex items-center gap-2 mb-1 text-[#858585]">
                   <Mic size={12} />
                   <span className="text-[10px] font-semibold uppercase tracking-wide">Synthesis Voice</span>
+=======
+            className="flex items-center gap-1 text-[10px] font-semibold text-[#8b949e] hover:text-[#e6edf3] transition-colors w-full py-1"
+            aria-expanded={showPlaybackSettings}
+          >
+            <ChevronDown size={11} className={`transition-transform ${showPlaybackSettings ? '' : '-rotate-90'}`} />
+            Playback Settings
+          </button>
+          {showPlaybackSettings && (
+            <>
+              {/* Voice selector */}
+              <div className="mb-2">
+                <label className="flex items-center gap-2 mb-1 text-[#8b949e]">
+                  <Mic size={12} />
+                  <span className="text-[10px] font-semibold uppercase tracking-wide">Voice</span>
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
                 </label>
                 <select
                   value={selectedVoiceURI ?? ''}
                   onChange={(e) => setSelectedVoiceURI(e.target.value || null)}
                   disabled={!matchingVoiceExists}
                   aria-label="Playback voice"
+<<<<<<< HEAD
                   className="w-full bg-[#1e1e1e] border border-[#3c3c3c] text-[#cccccc] text-xs rounded px-2 py-1 focus:outline-none focus:border-[#007acc] disabled:opacity-40 disabled:cursor-not-allowed"
+=======
+                  className="w-full bg-[#0d1117] border border-[#30363d] text-[#e6edf3] text-[11px] rounded px-2 py-1.5 focus:outline-none focus:border-[#58a6ff] disabled:opacity-40 disabled:cursor-not-allowed"
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
                 >
                   {availableVoices.map((v) => (
                     <option key={v.voiceURI} value={v.voiceURI}>
@@ -462,10 +560,17 @@ export default function VoiceExplanation({
               </div>
 
               {/* Speed slider */}
+<<<<<<< HEAD
               <div>
                 <label className="flex items-center justify-between mb-1 text-[#858585]">
                   <span className="text-[10px] font-semibold uppercase tracking-wide">Speech Rate</span>
                   <span className="text-xs font-mono text-[#007acc]">{speechRate.toFixed(1)}x</span>
+=======
+              <div className="mb-1">
+                <label className="flex items-center justify-between mb-1 text-[#8b949e]">
+                  <span className="text-[10px] font-semibold uppercase tracking-wide">Speed</span>
+                  <span className="text-[10px] font-mono text-[#58a6ff]">{speechRate.toFixed(1)}x</span>
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
                 </label>
                 <input
                   type="range"
@@ -475,10 +580,17 @@ export default function VoiceExplanation({
                   value={speechRate}
                   onChange={(e) => setSpeechRate(parseFloat(e.target.value))}
                   aria-label="Playback speed"
+<<<<<<< HEAD
                   className="w-full accent-[#007acc]"
                 />
               </div>
             </div>
+=======
+                  className="w-full accent-[#58a6ff]"
+                />
+              </div>
+            </>
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
           )}
         </div>
       )}

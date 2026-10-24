@@ -110,11 +110,19 @@ export default function FlowNode({
   };
 
   const ring = isSelected
+<<<<<<< HEAD
     ? 'ring-2 ring-[#007acc] border-[#007acc] z-30 shadow-md scale-[1.01]'
     : isSearchMatch
     ? 'ring-2 ring-[#cca700] z-20'
     : isHighlighted
     ? 'ring-2 ring-[#75beff] z-20'
+=======
+    ? 'ring-2 ring-[#0ea5e9] shadow-[0_0_22px_rgba(14,165,233,0.55)] scale-[1.02] z-30'
+    : isSearchMatch
+    ? 'ring-2 ring-yellow-400 shadow-[0_0_16px_rgba(250,204,21,0.5)] z-20'
+    : isHighlighted
+    ? 'ring-2 ring-purple-400 shadow-[0_0_16px_rgba(192,132,252,0.45)] z-20'
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
     : '';
 
   const lineLabel = lineStart
@@ -129,6 +137,7 @@ export default function FlowNode({
         onDoubleClick={handleDoubleClick}
         title={`START  ${file ? '· ' + file : ''}`}
         className={`cursor-pointer flex items-center justify-center gap-3 rounded-full
+<<<<<<< HEAD
           bg-[#1e1e1e] border-2 border-[#73c991] text-[#73c991] select-none
           transition-all duration-150 hover:bg-[#252526] ${ring}`}
         style={{ width: node.width ?? 180, height: node.height ?? 56 }}
@@ -138,6 +147,18 @@ export default function FlowNode({
           <Play size={11} className="text-[#73c991] fill-current ml-0.5" />
         </div>
         <span className="text-xs font-semibold tracking-wider uppercase">{label || 'START'}</span>
+=======
+          bg-gradient-to-r from-emerald-900 to-emerald-800
+          border-2 border-emerald-400 text-emerald-50 select-none
+          transition-all duration-200 shadow-lg ${ring}`}
+        style={{ width: node.width ?? 180, height: node.height ?? 56 }}
+      >
+        <div className="w-7 h-7 rounded-full bg-emerald-500/25 border border-emerald-400/60
+                        flex items-center justify-center shrink-0">
+          <Play size={13} className="text-emerald-300 fill-emerald-300 ml-0.5" />
+        </div>
+        <span className="text-sm font-bold tracking-widest uppercase">{label || 'START'}</span>
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
       </div>
     );
   }
@@ -150,6 +171,7 @@ export default function FlowNode({
         onDoubleClick={handleDoubleClick}
         title="END"
         className={`cursor-pointer flex items-center justify-center gap-3 rounded-full
+<<<<<<< HEAD
           bg-[#1e1e1e] border-2 border-[#f14c4c] text-[#f14c4c] select-none
           transition-all duration-150 hover:bg-[#252526] ${ring}`}
         style={{ width: node.width ?? 180, height: node.height ?? 56 }}
@@ -159,6 +181,18 @@ export default function FlowNode({
           <Square size={9} className="text-[#f14c4c] fill-current" />
         </div>
         <span className="text-xs font-semibold tracking-wider uppercase">{label || 'END'}</span>
+=======
+          bg-gradient-to-r from-rose-900 to-rose-800
+          border-2 border-rose-400 text-rose-50 select-none
+          transition-all duration-200 shadow-lg ${ring}`}
+        style={{ width: node.width ?? 180, height: node.height ?? 56 }}
+      >
+        <div className="w-7 h-7 rounded-full bg-rose-500/25 border border-rose-400/60
+                        flex items-center justify-center shrink-0">
+          <Square size={10} className="text-rose-300 fill-rose-300" />
+        </div>
+        <span className="text-sm font-bold tracking-widest uppercase">{label || 'END'}</span>
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
       </div>
     );
   }
@@ -172,6 +206,7 @@ export default function FlowNode({
         onDoubleClick={handleDoubleClick}
         title={`Condition: ${cond}`}
         className={`cursor-pointer relative flex flex-col justify-center items-center
+<<<<<<< HEAD
           bg-[#252526] border-2 border-[#cca700] text-[#cccccc] select-none
           transition-all duration-150 hover:bg-[#2a2d2e] shadow-md rounded-lg ${ring}`}
         style={{
@@ -179,20 +214,38 @@ export default function FlowNode({
           height: node.height ?? 110,
           clipPath: 'polygon(8% 0%, 92% 0%, 100% 50%, 92% 100%, 8% 100%, 0% 50%)',
           padding: '8px 24px'
+=======
+          bg-amber-950 border-2 border-amber-400 text-amber-50 select-none
+          transition-all duration-200 shadow-lg ${ring}`}
+        style={{
+          width: node.width ?? 260,
+          height: node.height ?? 110,
+          clipPath: 'polygon(10% 0%, 90% 0%, 100% 50%, 90% 100%, 10% 100%, 0% 50%)',
+          padding: '8px 28px'
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
         }}
       >
         {/* Type badge */}
         <div className="flex items-center gap-1.5 mb-1">
+<<<<<<< HEAD
           <HelpCircle size={12} className="text-[#cca700] shrink-0" />
           <span className="text-[10px] font-bold text-[#cca700] uppercase tracking-wider">Condition</span>
           {lineLabel && (
             <span className="ml-1 text-[9px] font-mono text-[#858585] bg-[#1e1e1e]
                              px-1.5 py-0.5 rounded border border-[#3c3c3c]">
+=======
+          <HelpCircle size={12} className="text-amber-400 shrink-0" />
+          <span className="text-[10px] font-bold text-amber-400 uppercase tracking-widest">Condition</span>
+          {lineLabel && (
+            <span className="ml-1 text-[9px] font-mono text-amber-500 bg-amber-950/60
+                             px-1.5 py-0.5 rounded border border-amber-700/40">
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
               {lineLabel}
             </span>
           )}
         </div>
         {/* Condition text */}
+<<<<<<< HEAD
         <div className="text-xs font-mono font-medium text-white text-center leading-snug
                         overflow-hidden" style={{ maxHeight: 38, wordBreak: 'break-word' }}>
           {truncateCode(cond, 52)}
@@ -201,6 +254,16 @@ export default function FlowNode({
         <div className="flex justify-between w-full px-2 mt-1.5 text-[10px] font-bold font-mono">
           <span className="text-[#73c991]">↙ YES</span>
           <span className="text-[#f14c4c]">NO ↘</span>
+=======
+        <div className="text-sm font-mono font-semibold text-amber-100 text-center leading-snug
+                        overflow-hidden" style={{ maxHeight: 40, wordBreak: 'break-word' }}>
+          {truncateCode(cond, 52)}
+        </div>
+        {/* Branch hints */}
+        <div className="flex justify-between w-full px-2 mt-1.5 text-[10px] font-bold">
+          <span className="text-emerald-400">↙ YES</span>
+          <span className="text-rose-400">NO ↘</span>
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
         </div>
       </div>
     );
@@ -215,6 +278,7 @@ export default function FlowNode({
         onDoubleClick={handleDoubleClick}
         title={`Loop condition: ${cond}`}
         className={`cursor-pointer relative flex flex-col justify-between
+<<<<<<< HEAD
           bg-[#252526] border border-[#3c3c3c] border-l-4 border-l-[#4fc1ff] text-[#cccccc] rounded-lg
           p-3 select-none transition-all duration-150 hover:bg-[#2a2d2e] shadow-sm ${ring}`}
         style={{ width: node.width ?? 240, height: node.height ?? 88 }}
@@ -227,10 +291,26 @@ export default function FlowNode({
           {lineLabel && (
             <span className="text-[10px] font-mono text-[#858585] bg-[#1e1e1e]
                              px-1.5 py-0.5 rounded border border-[#3c3c3c]">
+=======
+          bg-gradient-to-br from-indigo-950 to-blue-950
+          border-2 border-indigo-400 text-indigo-50 rounded-xl
+          p-3 select-none transition-all duration-200 shadow-lg ${ring}`}
+        style={{ width: node.width ?? 240, height: node.height ?? 92 }}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <RotateCw size={13} className="text-indigo-400 shrink-0" />
+            <span className="text-[11px] font-bold text-indigo-300 uppercase tracking-wide">Loop</span>
+          </div>
+          {lineLabel && (
+            <span className="text-[10px] font-mono text-indigo-400 bg-indigo-950/60
+                             px-1.5 py-0.5 rounded border border-indigo-700/40">
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
               {lineLabel}
             </span>
           )}
         </div>
+<<<<<<< HEAD
         <div className="text-xs font-mono font-semibold text-white leading-snug
                         overflow-hidden" style={{ maxHeight: 36 }}>
           {truncateCode(cond, 48)}
@@ -238,6 +318,15 @@ export default function FlowNode({
         <div className="text-[10px] text-[#858585] flex items-center gap-1">
           <RotateCw size={9} className="shrink-0 text-[#4fc1ff]" />
           <span>Repeats while true</span>
+=======
+        <div className="text-[13px] font-mono font-semibold text-indigo-100 leading-snug
+                        overflow-hidden" style={{ maxHeight: 36 }}>
+          {truncateCode(cond, 48)}
+        </div>
+        <div className="text-[10px] text-indigo-400 flex items-center gap-1">
+          <RotateCw size={9} className="shrink-0" />
+          <span>Repeats while condition is true</span>
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
         </div>
       </div>
     );
@@ -252,6 +341,7 @@ export default function FlowNode({
         onDoubleClick={handleDoubleClick}
         title={`Function: ${code}`}
         className={`cursor-pointer relative flex flex-col justify-between
+<<<<<<< HEAD
           bg-[#252526] border border-[#3c3c3c] border-l-4 border-l-[#b180d7] text-[#cccccc] rounded-lg
           p-3 select-none transition-all duration-150 hover:bg-[#2a2d2e] shadow-sm ${ring}`}
         style={{ width: node.width ?? 260, height: node.height ?? 88 }}
@@ -264,16 +354,40 @@ export default function FlowNode({
           {lineLabel && (
             <span className="text-[10px] font-mono text-[#858585] bg-[#1e1e1e]
                              px-1.5 py-0.5 rounded border border-[#3c3c3c]">
+=======
+          bg-gradient-to-br from-purple-950 to-violet-950
+          border-2 border-purple-400 text-purple-50 rounded-lg
+          p-3 select-none transition-all duration-200 shadow-lg ${ring}`}
+        style={{ width: node.width ?? 260, height: node.height ?? 90 }}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <Code2 size={13} className="text-purple-400 shrink-0" />
+            <span className="text-[11px] font-bold text-purple-300 uppercase tracking-wide">Function</span>
+          </div>
+          {lineLabel && (
+            <span className="text-[10px] font-mono text-purple-400 bg-purple-950/60
+                             px-1.5 py-0.5 rounded border border-purple-700/40">
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
               {lineLabel}
             </span>
           )}
         </div>
+<<<<<<< HEAD
         <div className="text-xs font-mono font-semibold text-[#dcdcaa] leading-snug
                         overflow-hidden"
              style={{ maxHeight: 38, wordBreak: 'break-word' }}>
           {truncateCode(title !== 'Function' ? code : label.replace(/^def\s+/, ''), 44)}
         </div>
         <div className="text-[10px] text-[#858585] truncate font-mono">
+=======
+        <div className="text-[13px] font-mono font-bold text-purple-100 leading-snug
+                        overflow-hidden"
+             style={{ maxHeight: 40, wordBreak: 'break-word' }}>
+          {truncateCode(title !== 'Function' ? code : label.replace(/^def\s+/, ''), 44)}
+        </div>
+        <div className="text-[10px] text-purple-400 truncate">
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
           {file ? file.split(/[/\\]/).pop() : ''}
         </div>
       </div>
@@ -289,26 +403,48 @@ export default function FlowNode({
         onDoubleClick={handleDoubleClick}
         title={`Input: ${code}`}
         className={`cursor-pointer relative flex flex-col justify-between
+<<<<<<< HEAD
           bg-[#252526] border border-[#3c3c3c] border-l-4 border-l-[#4ec9b0] text-[#cccccc] rounded-lg
           p-3 select-none transition-all duration-150 hover:bg-[#2a2d2e] shadow-sm ${ring}`}
         style={{
           width: node.width ?? 250,
           height: node.height ?? 84
+=======
+          bg-teal-950 border-2 border-teal-400 text-teal-50
+          p-3 select-none transition-all duration-200 shadow-md ${ring}`}
+        style={{
+          width: node.width ?? 250,
+          height: node.height ?? 84,
+          borderRadius: '6px 6px 6px 24px'    // parallelogram-like feel
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
         }}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
+<<<<<<< HEAD
             <ArrowDownToLine size={13} className="text-[#4ec9b0] shrink-0" />
             <span className="text-[11px] font-bold text-[#4ec9b0] uppercase tracking-wide">{title}</span>
           </div>
           {lineLabel && (
             <span className="text-[10px] font-mono text-[#858585] bg-[#1e1e1e]
                              px-1.5 py-0.5 rounded border border-[#3c3c3c]">
+=======
+            <ArrowDownToLine size={13} className="text-teal-400 shrink-0" />
+            <span className="text-[11px] font-bold text-teal-300 uppercase tracking-wide">{title}</span>
+          </div>
+          {lineLabel && (
+            <span className="text-[10px] font-mono text-teal-400 bg-teal-950/60
+                             px-1.5 py-0.5 rounded border border-teal-700/40">
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
               {lineLabel}
             </span>
           )}
         </div>
+<<<<<<< HEAD
         <div className="text-xs font-mono text-[#9cdcfe] leading-snug overflow-hidden"
+=======
+        <div className="text-[13px] font-mono text-teal-100 leading-snug overflow-hidden"
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
              style={{ maxHeight: 36, wordBreak: 'break-word' }}>
           {truncateCode(code, 50)}
         </div>
@@ -325,26 +461,48 @@ export default function FlowNode({
         onDoubleClick={handleDoubleClick}
         title={`Output: ${code}`}
         className={`cursor-pointer relative flex flex-col justify-between
+<<<<<<< HEAD
           bg-[#252526] border border-[#3c3c3c] border-l-4 border-l-[#ce9178] text-[#cccccc] rounded-lg
           p-3 select-none transition-all duration-150 hover:bg-[#2a2d2e] shadow-sm ${ring}`}
         style={{
           width: node.width ?? 250,
           height: node.height ?? 84
+=======
+          bg-sky-950 border-2 border-sky-400 text-sky-50
+          p-3 select-none transition-all duration-200 shadow-md ${ring}`}
+        style={{
+          width: node.width ?? 250,
+          height: node.height ?? 84,
+          borderRadius: '6px 24px 6px 6px'    // mirror of INPUT
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
         }}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
+<<<<<<< HEAD
             <ArrowUpFromLine size={13} className="text-[#ce9178] shrink-0" />
             <span className="text-[11px] font-bold text-[#ce9178] uppercase tracking-wide">{title}</span>
           </div>
           {lineLabel && (
             <span className="text-[10px] font-mono text-[#858585] bg-[#1e1e1e]
                              px-1.5 py-0.5 rounded border border-[#3c3c3c]">
+=======
+            <ArrowUpFromLine size={13} className="text-sky-400 shrink-0" />
+            <span className="text-[11px] font-bold text-sky-300 uppercase tracking-wide">{title}</span>
+          </div>
+          {lineLabel && (
+            <span className="text-[10px] font-mono text-sky-400 bg-sky-950/60
+                             px-1.5 py-0.5 rounded border border-sky-700/40">
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
               {lineLabel}
             </span>
           )}
         </div>
+<<<<<<< HEAD
         <div className="text-xs font-mono text-[#ce9178] leading-snug overflow-hidden"
+=======
+        <div className="text-[13px] font-mono text-sky-100 leading-snug overflow-hidden"
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
              style={{ maxHeight: 36, wordBreak: 'break-word' }}>
           {truncateCode(code, 50)}
         </div>
@@ -361,6 +519,7 @@ export default function FlowNode({
         onDoubleClick={handleDoubleClick}
         title={`Return: ${value || 'void'}`}
         className={`cursor-pointer relative flex items-center gap-3
+<<<<<<< HEAD
           bg-[#252526] border border-[#73c991] text-[#cccccc]
           px-3.5 py-2.5 rounded-lg select-none transition-all duration-150 hover:bg-[#2a2d2e] shadow-sm ${ring}`}
         style={{ width: node.width ?? 220, height: node.height ?? 66 }}
@@ -369,11 +528,26 @@ export default function FlowNode({
         <div className="flex-1 overflow-hidden">
           <div className="text-[10px] font-bold text-[#73c991] uppercase tracking-wide">Return</div>
           <div className="text-xs font-mono text-white truncate font-medium">
+=======
+          bg-gradient-to-r from-emerald-950 to-teal-950
+          border border-emerald-500 text-emerald-50
+          px-4 py-3 rounded-lg select-none transition-all duration-200 shadow-md ${ring}`}
+        style={{ width: node.width ?? 220, height: node.height ?? 66 }}
+      >
+        <CornerDownLeft size={16} className="text-emerald-400 shrink-0" />
+        <div className="flex-1 overflow-hidden">
+          <div className="text-[10px] font-bold text-emerald-500 uppercase tracking-wide">Return</div>
+          <div className="text-[13px] font-mono text-emerald-100 truncate font-semibold">
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
             {value || 'void'}
           </div>
         </div>
         {lineLabel && (
+<<<<<<< HEAD
           <span className="text-[10px] font-mono text-[#858585] shrink-0">{lineLabel}</span>
+=======
+          <span className="text-[10px] font-mono text-emerald-500 shrink-0">{lineLabel}</span>
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
         )}
       </div>
     );
@@ -387,12 +561,19 @@ export default function FlowNode({
         onDoubleClick={handleDoubleClick}
         title={`Exception: ${label}`}
         className={`cursor-pointer relative flex flex-col justify-between
+<<<<<<< HEAD
           bg-[#252526] border border-[#f14c4c] text-[#cccccc] rounded-lg
           p-3 select-none transition-all duration-150 hover:bg-[#2a2d2e] shadow-sm ${ring}`}
+=======
+          bg-gradient-to-r from-red-950 to-orange-950
+          border-2 border-red-500 text-red-50 rounded-lg
+          p-3 select-none transition-all duration-200 shadow-md ${ring}`}
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
         style={{ width: node.width ?? 240, height: node.height ?? 80 }}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
+<<<<<<< HEAD
             <AlertTriangle size={13} className="text-[#f14c4c] shrink-0" />
             <span className="text-[11px] font-bold text-[#f14c4c] uppercase tracking-wide">Exception</span>
           </div>
@@ -403,6 +584,16 @@ export default function FlowNode({
           )}
         </div>
         <div className="text-xs font-mono text-[#f14c4c] leading-snug overflow-hidden"
+=======
+            <AlertTriangle size={13} className="text-red-400 shrink-0" />
+            <span className="text-[11px] font-bold text-red-300 uppercase tracking-wide">Exception</span>
+          </div>
+          {lineLabel && (
+            <span className="text-[10px] font-mono text-red-400">{lineLabel}</span>
+          )}
+        </div>
+        <div className="text-[13px] font-mono text-red-100 leading-snug overflow-hidden"
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
              style={{ maxHeight: 36 }}>
           {truncateCode(label, 50)}
         </div>
@@ -418,24 +609,43 @@ export default function FlowNode({
         onDoubleClick={handleDoubleClick}
         title={`File: ${file || label}`}
         className={`cursor-pointer relative flex flex-col justify-between
+<<<<<<< HEAD
           bg-[#252526] border border-[#3c3c3c] border-l-4 border-l-[#007acc] text-[#cccccc] rounded-lg
           p-3 select-none transition-all duration-150 hover:bg-[#2a2d2e] shadow-sm ${ring}`}
+=======
+          bg-slate-900 border-2 border-cyan-500 text-cyan-50 rounded-xl
+          p-3 select-none transition-all duration-200 shadow-lg ${ring}`}
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
         style={{ width: node.width ?? 260, height: node.height ?? 92 }}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
+<<<<<<< HEAD
             <FileCode2 size={13} className="text-[#007acc] shrink-0" />
             <span className="text-[11px] font-bold text-[#007acc] uppercase tracking-wide">Source File</span>
           </div>
           {node.data?.functionCount !== undefined && (
             <span className="text-[10px] font-mono text-[#858585] bg-[#1e1e1e]
                              px-1.5 py-0.5 rounded border border-[#3c3c3c]">
+=======
+            <FileCode2 size={13} className="text-cyan-400 shrink-0" />
+            <span className="text-[11px] font-bold text-cyan-300 uppercase tracking-wide">Source File</span>
+          </div>
+          {node.data?.functionCount !== undefined && (
+            <span className="text-[10px] font-mono text-cyan-400 bg-cyan-950/40
+                             px-1.5 py-0.5 rounded border border-cyan-700/40">
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
               {node.data.functionCount} fn
             </span>
           )}
         </div>
+<<<<<<< HEAD
         <div className="text-xs font-mono font-semibold text-white truncate">{label}</div>
         <div className="text-[10px] text-[#858585] truncate font-mono">{file || ''}</div>
+=======
+        <div className="text-[14px] font-mono font-bold text-cyan-100 truncate">{label}</div>
+        <div className="text-[10px] text-cyan-500 truncate">{file || ''}</div>
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
       </div>
     );
   }
@@ -448,24 +658,44 @@ export default function FlowNode({
       onDoubleClick={handleDoubleClick}
       title={`${title}: ${code}`}
       className={`cursor-pointer relative flex flex-col justify-between
+<<<<<<< HEAD
         bg-[#252526] border border-[#3c3c3c] border-l-4 border-l-[#007acc]
         text-[#cccccc] rounded-lg
         p-3 select-none transition-all duration-150 hover:bg-[#2a2d2e] shadow-sm ${ring}`}
+=======
+        bg-[#161b22] border border-[#30363d]
+        text-[#e6edf3] rounded-lg
+        p-3 select-none transition-all duration-200 shadow-md
+        border-l-4 border-l-[#1f6feb] hover:border-[#58a6ff]/50 ${ring}`}
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
       style={{ width: node.width ?? 260, height: node.height ?? 84 }}
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
+<<<<<<< HEAD
           <Cpu size={12} className="text-[#007acc] shrink-0" />
           <span className="text-[10.5px] font-bold text-[#007acc] uppercase tracking-wide">{title}</span>
         </div>
         {lineLabel && (
           <span className="text-[10px] font-mono text-[#858585] bg-[#1e1e1e]
                            px-1.5 py-0.5 rounded border border-[#3c3c3c]">
+=======
+          <Cpu size={11} className="text-[#58a6ff] shrink-0" />
+          <span className="text-[10px] font-bold text-[#58a6ff] uppercase tracking-wide">{title}</span>
+        </div>
+        {lineLabel && (
+          <span className="text-[10px] font-mono text-[#7d8590] bg-[#21262d]
+                           px-1.5 py-0.5 rounded border border-[#30363d]">
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
             {lineLabel}
           </span>
         )}
       </div>
+<<<<<<< HEAD
       <div className="text-xs font-mono text-[#9cdcfe] font-medium leading-snug
+=======
+      <div className="text-[13px] font-mono text-[#e6edf3] font-semibold leading-snug
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
                       overflow-hidden" style={{ maxHeight: 38, wordBreak: 'break-word' }}>
         {truncateCode(code, 55)}
       </div>

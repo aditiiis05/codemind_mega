@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // client/components/visualization/VisualizationHeader.tsx
 // Sleek, compact single-row header for switching between Flowchart & Mind Map
 
@@ -5,20 +6,30 @@
 
 import React from 'react';
 import { GitBranch, Activity, FileCode, Maximize2, Minimize2, RefreshCw } from 'lucide-react';
+=======
+'use client';
+
+import React from 'react';
+import { GitBranch, Activity, Network } from 'lucide-react';
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
 
 interface VisualizationHeaderProps {
   activeTab: 'flowchart' | 'mindmap';
   onTabChange: (tab: 'flowchart' | 'mindmap') => void;
   fileName?: string | null;
+<<<<<<< HEAD
   onRefresh?: () => void;
   isFullscreen?: boolean;
   onToggleFullscreen?: () => void;
+=======
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
 }
 
 export default function VisualizationHeader({
   activeTab,
   onTabChange,
   fileName,
+<<<<<<< HEAD
   onRefresh,
   isFullscreen = false,
   onToggleFullscreen,
@@ -31,12 +42,42 @@ export default function VisualizationHeader({
           role="tablist"
           aria-label="Code visualization modes"
           className="flex items-center p-0.5 bg-[#1e1e1e] rounded border border-[#3c3c3c]"
+=======
+}: VisualizationHeaderProps) {
+  return (
+    <div className="flex flex-col bg-[#161b22] border-b border-[#30363d] shrink-0 select-none">
+      {/* Title Bar */}
+      <div className="flex items-center justify-between px-3 pt-2.5 pb-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <Network size={14} className="text-[#58a6ff] shrink-0" />
+          <h2 className="text-[11px] uppercase tracking-wider font-bold text-[#e6edf3] truncate">
+            CODE VISUALIZATION
+          </h2>
+        </div>
+        {fileName && (
+          <span
+            className="text-[10px] font-mono text-[#58a6ff] bg-[#1f6feb]/10 border border-[#1f6feb]/25 px-1.5 py-0.5 rounded truncate max-w-[140px] shrink-0"
+            title={fileName}
+          >
+            {fileName}
+          </span>
+        )}
+      </div>
+
+      {/* Segmented Control (Flowchart | Mind Map) */}
+      <div className="px-3 pb-2.5">
+        <div
+          role="tablist"
+          aria-label="Code visualization modes"
+          className="grid grid-cols-2 p-1 bg-[#0d1117] rounded-lg border border-[#30363d] gap-1 shadow-inner"
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
         >
           <button
             type="button"
             role="tab"
             aria-selected={activeTab === 'flowchart'}
             onClick={() => onTabChange('flowchart')}
+<<<<<<< HEAD
             className={`flex items-center gap-1.5 py-1 px-2.5 rounded text-xs font-medium transition-all cursor-pointer ${
               activeTab === 'flowchart'
                 ? 'bg-[#0e639c] text-white shadow-sm'
@@ -48,11 +89,23 @@ export default function VisualizationHeader({
             <span>Flowchart</span>
           </button>
 
+=======
+            className={`flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-md text-xs font-semibold transition-all duration-150 ${
+              activeTab === 'flowchart'
+                ? 'bg-[#1f6feb] text-white shadow-sm ring-1 ring-[#58a6ff]/40'
+                : 'text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d]'
+            }`}
+          >
+            <GitBranch size={13} className={activeTab === 'flowchart' ? 'text-white' : 'text-[#8b949e]'} />
+            <span>Flowchart</span>
+          </button>
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
           <button
             type="button"
             role="tab"
             aria-selected={activeTab === 'mindmap'}
             onClick={() => onTabChange('mindmap')}
+<<<<<<< HEAD
             className={`flex items-center gap-1.5 py-1 px-2.5 rounded text-xs font-medium transition-all cursor-pointer ${
               activeTab === 'mindmap'
                 ? 'bg-[#0e639c] text-white shadow-sm'
@@ -61,10 +114,20 @@ export default function VisualizationHeader({
             title="Repository Mind Map & Architecture"
           >
             <Activity size={12} className={activeTab === 'mindmap' ? 'text-white' : 'text-[#858585]'} />
+=======
+            className={`flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-md text-xs font-semibold transition-all duration-150 ${
+              activeTab === 'mindmap'
+                ? 'bg-[#1f6feb] text-white shadow-sm ring-1 ring-[#58a6ff]/40'
+                : 'text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d]'
+            }`}
+          >
+            <Activity size={13} className={activeTab === 'mindmap' ? 'text-white' : 'text-[#8b949e]'} />
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
             <span>Mind Map</span>
           </button>
         </div>
       </div>
+<<<<<<< HEAD
 
       {/* Center: File badge */}
       {fileName && (
@@ -102,6 +165,8 @@ export default function VisualizationHeader({
           </button>
         )}
       </div>
+=======
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
     </div>
   );
 }

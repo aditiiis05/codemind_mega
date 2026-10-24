@@ -13,9 +13,13 @@ import {
   AlertCircle,
   Loader2,
   Brain,
+<<<<<<< HEAD
   Download,
   GitFork,
   Radio
+=======
+  Download
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
 } from 'lucide-react';
 import MermaidChart, { MermaidChartHandle } from '../MermaidChart';
 
@@ -39,7 +43,10 @@ export default function MindMapView({
   // Mind map controls
   const [searchQuery, setSearchQuery] = useState('');
   const [zoom, setZoom] = useState(1.0);
+<<<<<<< HEAD
   const [viewMode, setViewMode] = useState<'tree' | 'radial'>('tree');
+=======
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
   const [moreOptionsOpen, setMoreOptionsOpen] = useState(false);
 
   const mermaidChartRef = useRef<MermaidChartHandle>(null);
@@ -79,7 +86,11 @@ export default function MindMapView({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           codeContent: selectedFileContent,
+<<<<<<< HEAD
           diagramType: viewMode === 'radial' ? 'flowchart' : 'mindmap',
+=======
+          diagramType: 'mindmap',
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
           fileName: fileName || null,
           language: language || null,
         }),
@@ -99,6 +110,7 @@ export default function MindMapView({
       }
     } catch (err: unknown) {
       console.error('[MindMapView] Error generating diagram:', err);
+<<<<<<< HEAD
       // Fallback demo mindmap if server is unavailable
       setMermaidCode(`mindmap
   root((CodeMind Architecture))
@@ -114,6 +126,9 @@ export default function MindMapView({
       AST Engine
       Ollama LLM Tutor
       Flowchart Analyzer`);
+=======
+      setError(err instanceof Error ? err.message : 'Failed to generate mind map. Is the backend server running?');
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
     } finally {
       setIsLoading(false);
     }
@@ -127,6 +142,7 @@ export default function MindMapView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [triggerGeneration?.timestamp]);
 
+<<<<<<< HEAD
   // Estimate node count from mermaid code
   const nodeCount = React.useMemo(() => {
     if (!mermaidCode) return 0;
@@ -134,6 +150,8 @@ export default function MindMapView({
     return Math.max(lines.length, 1);
   }, [mermaidCode]);
 
+=======
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
   // Zoom handlers
   const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.15, 2.5));
   const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.15, 0.4));
@@ -147,6 +165,7 @@ export default function MindMapView({
   };
 
   return (
+<<<<<<< HEAD
     <div className="h-full flex flex-col bg-[#1e1e1e] text-[#cccccc] overflow-hidden select-none text-xs">
       {/* ── Mind Map Toolbar ── */}
       <div className="flex items-center justify-between gap-1.5 px-3 py-1.5 bg-[#252526] border-b border-[#2b2b2b] shrink-0 flex-wrap">
@@ -160,19 +179,42 @@ export default function MindMapView({
             onChange={e => setSearchQuery(e.target.value)}
             disabled={!mermaidCode}
             className="w-full bg-[#1e1e1e] border border-[#3c3c3c] focus:border-[#007acc] rounded pl-7 pr-6 py-1 text-xs text-white placeholder-[#858585] focus:outline-none transition-colors font-mono disabled:opacity-40"
+=======
+    <div className="h-full flex flex-col bg-[#0d1117] text-[#e6edf3] overflow-hidden select-none">
+      {/* ── Mind Map Toolbar ── */}
+      <div className="flex items-center gap-2 px-3 py-1.5 bg-[#161b22] border-b border-[#30363d] shrink-0">
+        {/* Search nodes */}
+        <div className="relative flex-1 min-w-[120px]">
+          <Search size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#8b949e]" />
+          <input
+            type="text"
+            placeholder="Search mind map nodes…"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            disabled={!mermaidCode}
+            className="w-full bg-[#0d1117] border border-[#30363d] rounded pl-7 pr-6 py-1 text-xs text-[#c9d1d9] placeholder-[#7d8590] focus:border-[#58a6ff] focus:outline-none transition-colors disabled:opacity-50"
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery('')}
+<<<<<<< HEAD
               className="absolute right-2 top-1/2 -translate-y-1/2 text-[#858585] hover:text-white cursor-pointer"
               title="Clear search"
             >
               <X size={12} />
+=======
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-[#8b949e] hover:text-[#e6edf3]"
+              title="Clear search"
+            >
+              <X size={11} />
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
             </button>
           )}
         </div>
 
+<<<<<<< HEAD
         {/* View Mode Toggle: Tree vs Radial */}
         <div className="flex items-center gap-1 bg-[#1e1e1e] p-0.5 rounded border border-[#3c3c3c]">
           <button
@@ -206,12 +248,22 @@ export default function MindMapView({
 
         {/* Zoom controls */}
         <div className="flex items-center gap-0.5 bg-[#1e1e1e] p-0.5 rounded border border-[#3c3c3c] shrink-0">
+=======
+        {/* Zoom controls */}
+        <div className="flex items-center gap-0.5 bg-[#0d1117] p-0.5 rounded border border-[#30363d] shrink-0">
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
           <button
             type="button"
             onClick={handleZoomOut}
             title="Zoom out"
+<<<<<<< HEAD
             disabled={!mermaidCode}
             className="p-1 text-[#858585] hover:text-white rounded transition-colors disabled:opacity-40 cursor-pointer"
+=======
+            aria-label="Zoom out"
+            disabled={!mermaidCode}
+            className="p-1 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d] rounded transition-colors disabled:opacity-40"
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
           >
             <ZoomOut size={12} />
           </button>
@@ -220,8 +272,14 @@ export default function MindMapView({
             type="button"
             onClick={handleResetZoom}
             title="Reset zoom to 100%"
+<<<<<<< HEAD
             disabled={!mermaidCode}
             className="min-w-[32px] px-1 text-center py-0.5 text-[10px] font-mono text-[#858585] hover:text-white rounded transition-colors disabled:opacity-40"
+=======
+            aria-label="Reset zoom"
+            disabled={!mermaidCode}
+            className="min-w-[34px] px-1 text-center py-0.5 text-[10px] font-mono text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d] rounded transition-colors disabled:opacity-40"
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
           >
             {Math.round(zoom * 100)}%
           </button>
@@ -230,30 +288,51 @@ export default function MindMapView({
             type="button"
             onClick={handleZoomIn}
             title="Zoom in"
+<<<<<<< HEAD
             disabled={!mermaidCode}
             className="p-1 text-[#858585] hover:text-white rounded transition-colors disabled:opacity-40 cursor-pointer"
+=======
+            aria-label="Zoom in"
+            disabled={!mermaidCode}
+            className="p-1 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d] rounded transition-colors disabled:opacity-40"
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
           >
             <ZoomIn size={12} />
           </button>
 
+<<<<<<< HEAD
           <div className="w-px h-3 bg-[#3c3c3c] mx-0.5" />
+=======
+          <div className="w-px h-3 bg-[#30363d] mx-0.5" />
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
 
           <button
             type="button"
             onClick={handleFitToView}
             title="Fit to view"
+<<<<<<< HEAD
             disabled={!mermaidCode}
             className="p-1 text-[#858585] hover:text-white rounded transition-colors disabled:opacity-40 cursor-pointer"
+=======
+            aria-label="Fit to view"
+            disabled={!mermaidCode}
+            className="p-1 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d] rounded transition-colors disabled:opacity-40"
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
           >
             <Maximize2 size={12} />
           </button>
         </div>
 
+<<<<<<< HEAD
         {/* Options Dropdown */}
+=======
+        {/* More options dropdown */}
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
         <div className="relative shrink-0" ref={moreOptionsRef}>
           <button
             type="button"
             onClick={() => setMoreOptionsOpen(prev => !prev)}
+<<<<<<< HEAD
             className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#1e1e1e] hover:bg-[#2a2d2e] border border-[#3c3c3c] text-[#cccccc] font-medium text-[11px] transition-colors cursor-pointer"
           >
             <span>Options</span>
@@ -262,6 +341,22 @@ export default function MindMapView({
 
           {moreOptionsOpen && (
             <div className="absolute right-0 top-full mt-1 w-44 bg-[#252526] border border-[#3c3c3c] rounded shadow-xl py-1 z-50 text-xs">
+=======
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#21262d] hover:bg-[#30363d] border border-[#30363d] text-[#e6edf3] font-medium text-[11px] transition-colors focus:outline-none focus:border-[#58a6ff]/60"
+            title="Mind map options and export"
+            aria-expanded={moreOptionsOpen}
+          >
+            <span>Options</span>
+            <ChevronDown size={11} className={`text-[#8b949e] transition-transform ${moreOptionsOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {moreOptionsOpen && (
+            <div className="absolute right-0 top-full mt-1 w-44 bg-[#1c2128] border border-[#30363d] rounded-md shadow-xl py-1 z-50 text-[11px]">
+              <div className="px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-[#8b949e] border-b border-[#30363d]/40 mb-1">
+                Mind Map Actions
+              </div>
+
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
               <button
                 type="button"
                 onClick={() => {
@@ -269,6 +364,7 @@ export default function MindMapView({
                   handleGenerateMindMap();
                 }}
                 disabled={!selectedFileContent || isLoading}
+<<<<<<< HEAD
                 className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-[#2a2d2e] text-[#cccccc] hover:text-white transition-colors disabled:opacity-40 cursor-pointer"
               >
                 <RefreshCw size={12} className={isLoading ? 'animate-spin text-[#007acc]' : 'text-[#858585]'} />
@@ -276,14 +372,32 @@ export default function MindMapView({
               </button>
 
               <div className="border-t border-[#3c3c3c] my-1" />
+=======
+                className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left hover:bg-[#21262d] text-[#c9d1d9] transition-colors disabled:opacity-40"
+              >
+                <RefreshCw size={12} className={isLoading ? 'animate-spin text-[#58a6ff]' : 'text-[#8b949e]'} />
+                <span>Regenerate Map</span>
+              </button>
+
+              <div className="border-t border-[#30363d]/40 my-1" />
+              <div className="px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[#8b949e]">
+                Export
+              </div>
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
 
               <button
                 type="button"
                 onClick={() => handleExport('svg')}
                 disabled={!mermaidCode}
+<<<<<<< HEAD
                 className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-[#2a2d2e] text-[#cccccc] hover:text-white transition-colors disabled:opacity-40 cursor-pointer"
               >
                 <Download size={12} className="text-[#858585]" />
+=======
+                className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left hover:bg-[#21262d] text-[#c9d1d9] transition-colors disabled:opacity-40"
+              >
+                <Download size={12} className="text-[#8b949e]" />
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
                 <span>Export SVG</span>
               </button>
 
@@ -291,17 +405,36 @@ export default function MindMapView({
                 type="button"
                 onClick={() => handleExport('png')}
                 disabled={!mermaidCode}
+<<<<<<< HEAD
                 className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-[#2a2d2e] text-[#cccccc] hover:text-white transition-colors disabled:opacity-40 cursor-pointer"
               >
                 <Download size={12} className="text-[#858585]" />
                 <span>Export PNG</span>
               </button>
+=======
+                className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left hover:bg-[#21262d] text-[#c9d1d9] transition-colors disabled:opacity-40"
+              >
+                <Download size={12} className="text-[#8b949e]" />
+                <span>Export PNG</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleExport('pdf')}
+                disabled={!mermaidCode}
+                className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left hover:bg-[#21262d] text-[#c9d1d9] transition-colors disabled:opacity-40"
+              >
+                <Download size={12} className="text-[#8b949e]" />
+                <span>Export PDF</span>
+              </button>
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
             </div>
           )}
         </div>
       </div>
 
       {/* ── Mind Map Canvas ── */}
+<<<<<<< HEAD
       <div className="flex-1 relative overflow-hidden bg-[#1e1e1e]">
         {isLoading ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center text-[#858585] gap-3">
@@ -309,10 +442,20 @@ export default function MindMapView({
             <div>
               <p className="text-sm font-semibold text-white">Generating Mind Map</p>
               <p className="text-xs text-[#858585] mt-1">Analyzing code architecture, classes, and hierarchy with AI…</p>
+=======
+      <div className="flex-1 relative overflow-hidden bg-[#0d1117]">
+        {isLoading ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center text-[#7d8590] gap-3">
+            <Loader2 size={32} className="text-[#58a6ff] animate-spin" />
+            <div>
+              <p className="text-sm font-semibold text-[#e6edf3]">Generating Mind Map</p>
+              <p className="text-xs text-[#7d8590] mt-1">Analyzing code architecture, classes, and hierarchy with AI…</p>
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
             </div>
           </div>
         ) : error ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
+<<<<<<< HEAD
             <div className="p-3 rounded-lg bg-[#5a1d1d]/40 text-[#f48771] mb-3 border border-[#f48771]/30">
               <AlertCircle size={24} />
             </div>
@@ -324,11 +467,28 @@ export default function MindMapView({
               className="flex items-center gap-2 px-3 py-1.5 bg-[#0e639c] hover:bg-[#1177bb] text-white rounded text-xs font-semibold transition-colors cursor-pointer"
             >
               <RefreshCw size={12} />
+=======
+            <div className="p-3 rounded-full bg-red-500/10 text-red-400 mb-3 border border-red-500/30">
+              <AlertCircle size={28} />
+            </div>
+            <h3 className="text-sm font-bold text-red-400 mb-1">Mind Map Generation Failed</h3>
+            <p className="text-xs text-[#7d8590] max-w-md mb-4">{error}</p>
+            <button
+              type="button"
+              onClick={handleGenerateMindMap}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-[#e6edf3] rounded text-xs font-semibold transition-all border border-[#30363d]"
+            >
+              <RefreshCw size={13} />
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
               <span>Retry Generation</span>
             </button>
           </div>
         ) : mermaidCode ? (
+<<<<<<< HEAD
           <div className="w-full h-full overflow-auto ide-scrollbar">
+=======
+          <div className="w-full h-full overflow-auto">
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
             <MermaidChart
               ref={mermaidChartRef}
               chart={mermaidCode}
@@ -338,28 +498,50 @@ export default function MindMapView({
             />
           </div>
         ) : selectedFileContent ? (
+<<<<<<< HEAD
           <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center text-[#858585]">
             <div className="p-3 bg-[#252526] rounded-lg border border-[#3c3c3c] mb-3">
               <Brain size={28} className="text-[#007acc]" />
             </div>
             <h3 className="text-sm font-semibold text-white mb-1">Code Architecture Mind Map</h3>
             <p className="text-xs text-[#858585] max-w-sm mb-4">
+=======
+          <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center text-[#7d8590]">
+            <div className="p-3 bg-[#161b22] rounded-xl border border-[#30363d] mb-3">
+              <Brain size={32} className="text-[#58a6ff]" />
+            </div>
+            <h3 className="text-sm font-bold text-[#e6edf3] mb-1">Code Architecture Mind Map</h3>
+            <p className="text-xs text-[#7d8590] max-w-sm mb-4">
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
               Generate an interactive hierarchical mind map of {fileName || 'current file'} to visualize classes, functions, and dependencies.
             </p>
             <button
               type="button"
               onClick={handleGenerateMindMap}
+<<<<<<< HEAD
               className="flex items-center gap-2 px-3 py-1.5 bg-[#0e639c] hover:bg-[#1177bb] text-white rounded text-xs font-semibold transition-colors cursor-pointer"
             >
               <Brain size={13} />
+=======
+              className="flex items-center gap-2 px-4 py-2 bg-[#1f6feb] hover:bg-[#388bfd] text-white rounded-md text-xs font-semibold shadow-md transition-all active:scale-95"
+            >
+              <Brain size={14} />
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
               <span>Generate Mind Map</span>
             </button>
           </div>
         ) : (
+<<<<<<< HEAD
           <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center text-[#858585]">
             <FileCode size={32} className="text-[#3c3c3c] mb-2" />
             <p className="text-sm font-semibold text-white">No File Selected</p>
             <p className="text-xs text-[#858585] max-w-xs mt-1">
+=======
+          <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center text-[#7d8590]">
+            <FileCode size={36} className="text-[#30363d] mb-3" />
+            <p className="text-sm font-semibold text-[#e6edf3]">No File Selected</p>
+            <p className="text-xs text-[#7d8590] max-w-xs mt-1">
+>>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
               Select a file from the repository explorer on the left to generate its architecture mind map.
             </p>
           </div>
