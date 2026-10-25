@@ -89,6 +89,18 @@ export default function HomePage() {
     setIsLoading(true);
     setError('');
     try {
+      // Fetch the authenticated user's profile first to get the correct username
+      const userResponse = await fetch('https://api.github.com/user', {
+        headers: {
+          Authorization: `token ${token}`,
+          Accept: 'application/vnd.github.v3+json',
+        },
+      });
+      if (userResponse.ok) {
+        const userData = await userResponse.json();
+        setUserLogin(userData.login);
+      }
+
       const response = await fetch('https://api.github.com/user/repos?sort=updated&per_page=50', {
         headers: {
           Authorization: `token ${token}`,
@@ -106,7 +118,6 @@ export default function HomePage() {
       }
       const data: Repository[] = await response.json();
       setRepos(data);
-      if (data.length > 0) setUserLogin(data[0].owner.login);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to fetch repositories');
       localStorage.removeItem('github_token');
@@ -165,16 +176,7 @@ export default function HomePage() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-<<<<<<< HEAD
-          <button
-            onClick={() => router.push('/repo/codemind/core')}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#7957FF] to-[#3478FF] hover:from-[#8A6CFF] hover:to-[#4586FF] text-white text-xs font-semibold shadow-[0_0_12px_rgba(121,87,255,0.4)] transition-all"
-          >
-            <Code2 size={13} />
-            <span>Launch IDE</span>
-          </button>
-=======
->>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
+
           {userLogin && (
             <span style={{ fontSize: 13, color: '#8b949e' }}>@{userLogin}</span>
           )}

@@ -1,6 +1,5 @@
 'use client';
 
-<<<<<<< HEAD
 import React, { useState, useRef, useCallback } from 'react';
 import {
   X,
@@ -16,15 +15,10 @@ import {
   CheckCircle2,
   Trash2
 } from 'lucide-react';
-=======
-import React, { useState } from 'react';
-import { X, ChevronDown, ChevronUp, Terminal, AlertCircle, FileText, Bug } from 'lucide-react';
->>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
 
 interface PanelProps {
   isOpen?: boolean;
   onClose?: () => void;
-<<<<<<< HEAD
   analysisContent?: string;
   isAnalyzing?: boolean;
 }
@@ -89,32 +83,6 @@ export default function Panel({ onClose, analysisContent, isAnalyzing }: PanelPr
       {/* ── Panel Header Bar ── */}
       <div className="h-[30px] flex items-center justify-between px-3 bg-[#252526] border-b border-[#2b2b2b] shrink-0">
         <div className="flex items-center h-full gap-0.5">
-=======
-}
-
-type BottomTab = 'problems' | 'output' | 'debug' | 'terminal';
-
-export default function Panel({ onClose }: PanelProps) {
-  const [activeTab, setActiveTab] = useState<BottomTab>('terminal');
-  const [isCollapsed, setIsCollapsed] = useState(true);
-
-  const tabs: Array<{ id: BottomTab; label: string; icon: React.ReactNode; badge?: string }> = [
-    { id: 'problems', label: 'Problems', icon: <AlertCircle size={12} />, badge: '0' },
-    { id: 'output', label: 'Output', icon: <FileText size={12} /> },
-    { id: 'debug', label: 'Debug Console', icon: <Bug size={12} /> },
-    { id: 'terminal', label: 'Terminal', icon: <Terminal size={12} /> },
-  ];
-
-  return (
-    <div
-      className={`shrink-0 bg-[#161b22] border-t border-[#30363d] flex flex-col transition-all duration-200 select-none ${
-        isCollapsed ? 'h-7' : 'h-40'
-      }`}
-    >
-      {/* ── Panel Header Bar ── */}
-      <div className="h-7 flex items-center justify-between px-3 bg-[#1c2128] border-b border-[#30363d]/60 shrink-0">
-        <div className="flex items-center gap-1 h-full">
->>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
@@ -125,7 +93,6 @@ export default function Panel({ onClose }: PanelProps) {
                   setActiveTab(tab.id);
                   if (isCollapsed) setIsCollapsed(false);
                 }}
-<<<<<<< HEAD
                 className={`inline-flex items-center gap-1.5 px-3 h-full text-[11px] font-sans font-medium tracking-wide transition-colors border-b cursor-pointer ${
                   isActive && !isCollapsed
                     ? 'text-white border-[#007acc] bg-[#1e1e1e]/60 font-semibold'
@@ -135,18 +102,6 @@ export default function Panel({ onClose }: PanelProps) {
                 <span>{tab.label}</span>
                 {tab.badge !== undefined && (
                   <span className="ml-1 px-1.5 py-0.2 rounded-full text-[9px] font-mono bg-[#3c3c3c] text-[#cccccc]">
-=======
-                className={`flex items-center gap-1.5 px-2.5 h-full text-[11px] font-medium transition-colors border-b-2 ${
-                  isActive && !isCollapsed
-                    ? 'text-[#58a6ff] border-[#1f6feb] bg-[#161b22]'
-                    : 'text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d] border-transparent'
-                }`}
-              >
-                {tab.icon}
-                <span>{tab.label}</span>
-                {tab.badge && (
-                  <span className="px-1 py-0.2 rounded-full text-[9px] bg-[#21262d] text-[#8b949e] border border-[#30363d]">
->>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
                     {tab.badge}
                   </span>
                 )}
@@ -155,22 +110,14 @@ export default function Panel({ onClose }: PanelProps) {
           })}
         </div>
 
-<<<<<<< HEAD
         {/* ── Actions on right ── */}
         <div className="flex items-center gap-1 text-[#858585]">
-=======
-        <div className="flex items-center gap-1">
->>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
           <button
             type="button"
             onClick={() => setIsCollapsed((prev) => !prev)}
             aria-label={isCollapsed ? 'Expand panel' : 'Collapse panel'}
             title={isCollapsed ? 'Expand panel' : 'Collapse panel'}
-<<<<<<< HEAD
             className="p-1 hover:text-white hover:bg-[#3c3c3c] rounded transition-colors cursor-pointer"
-=======
-            className="p-1 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d] rounded transition-colors"
->>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
           >
             {isCollapsed ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
           </button>
@@ -180,11 +127,7 @@ export default function Panel({ onClose }: PanelProps) {
               onClick={onClose}
               aria-label="Close panel"
               title="Close panel"
-<<<<<<< HEAD
               className="p-1 hover:text-[#f14c4c] hover:bg-[#3c3c3c] rounded transition-colors cursor-pointer"
-=======
-              className="p-1 text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d] rounded transition-colors"
->>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
             >
               <X size={13} />
             </button>
@@ -192,7 +135,6 @@ export default function Panel({ onClose }: PanelProps) {
         </div>
       </div>
 
-<<<<<<< HEAD
       {/* ── Panel Body ── */}
       {!isCollapsed && (
         <div className="flex-1 overflow-y-auto p-3 text-xs font-mono bg-[#1e1e1e] text-[#cccccc] min-h-0 ide-scrollbar">
@@ -206,22 +148,11 @@ export default function Panel({ onClose }: PanelProps) {
               <div className="flex items-center gap-2 text-[#858585] pl-5 text-[11px]">
                 <Info size={11} className="shrink-0" />
                 <span>Watching for file changes... (TypeScript diagnostics active)</span>
-=======
-      {/* ── Panel Content Body (hidden when collapsed) ── */}
-      {!isCollapsed && (
-        <div className="flex-1 overflow-y-auto p-3 text-xs font-mono bg-[#0d1117] text-[#c9d1d9] min-h-0">
-          {activeTab === 'problems' && (
-            <div className="flex items-center justify-center h-full text-[#8b949e] text-center">
-              <div>
-                <AlertCircle size={20} className="mx-auto mb-1 text-[#3fb950]" />
-                <p className="text-[11px]">No problems have been detected in the workspace.</p>
->>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
               </div>
             </div>
           )}
 
           {activeTab === 'output' && (
-<<<<<<< HEAD
             <div className="space-y-1.5 text-xs leading-relaxed font-mono select-text">
               <div className="flex items-center gap-2">
                 <span className="text-[#75beff] font-bold">[INFO]</span>
@@ -235,33 +166,20 @@ export default function Panel({ onClose }: PanelProps) {
                 <span className="text-[#858585]">[WATCH]</span>
                 <span className="text-[#858585]">Monitoring file updates across client and server.</span>
               </div>
-=======
-            <div className="space-y-1 text-[11px] leading-relaxed text-[#8b949e]">
-              <p className="text-[#3fb950]">[CodeMind] Language Server initialized.</p>
-              <p>[CodeMind] Real-time AST parser ready.</p>
-              <p>[CodeMind] AI assistant telemetry active.</p>
-              <p>[CodeMind] Control flow graph engine standing by.</p>
->>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
             </div>
           )}
 
           {activeTab === 'debug' && (
-<<<<<<< HEAD
             <div className="text-xs text-[#858585] py-1 font-mono select-text space-y-1">
               <div className="flex items-center gap-2 text-[#75beff]">
                 <Bug size={12} />
                 <span className="font-semibold">CodeMind Debugger session initialized</span>
               </div>
               <p className="text-[#858585]">Type any JavaScript / TypeScript expression or variable name to evaluate in context.</p>
-=======
-            <div className="flex items-center justify-center h-full text-[#8b949e] text-center">
-              <p className="text-[11px]">Debugger is idle. Set a breakpoint or run project analysis.</p>
->>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
             </div>
           )}
 
           {activeTab === 'terminal' && (
-<<<<<<< HEAD
             <div className="space-y-1 text-xs font-mono leading-relaxed select-text">
               <p className="text-[#858585]">CodeMind Integrated Terminal (zsh)</p>
               <div className="pt-1 text-[#75beff]">
@@ -292,15 +210,6 @@ export default function Panel({ onClose }: PanelProps) {
                   {analysisContent || "Click 'Run Repository Deep Analysis' in the AI Assistant to generate an architectural report."}
                 </pre>
               )}
-=======
-            <div className="space-y-1 text-[11px] leading-relaxed">
-              <p className="text-[#8b949e]">CodeMind.AI Embedded Terminal [Version 1.0.0]</p>
-              <p className="text-[#8b949e]">(c) CodeMind AI Corporation. All rights reserved.</p>
-              <div className="flex items-center gap-1.5 pt-2 text-[#58a6ff]">
-                <span>codemind@ide:~/workspace$</span>
-                <span className="w-1.5 h-3.5 bg-[#58a6ff] animate-pulse inline-block" />
-              </div>
->>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
             </div>
           )}
         </div>

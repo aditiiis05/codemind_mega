@@ -7,6 +7,17 @@ const router = express.Router();
 const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID;
 const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
 
+// Placeholder sentinel — treat this as "not configured"
+const PLACEHOLDER = 'your_github_client_id_here';
+const isOAuthConfigured =
+  GITHUB_CLIENT_ID && GITHUB_CLIENT_ID !== PLACEHOLDER;
+
+// Public Device Flow client ID (GitHub CLI's app — works for any GitHub user,
+// no OAuth app registration needed). Used as fallback when no app is configured.
+const GITHUB_DEVICE_CLIENT_ID = isOAuthConfigured
+  ? GITHUB_CLIENT_ID
+  : '01ab8ac9400c4e429b23';
+
 // Prefer the explicit env callback; default to /api/github/callback
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 const FALLBACK_CALLBACK = 'http://localhost:4000/api/github/callback';
@@ -37,20 +48,53 @@ const verifyGitHubToken = (req, res, next) => {
   next();
 };
 
-// ==================== OAUTH ROUTES ====================
+// ==================== DEVICE FLOW ROUTES ====================
+// These proxy GitHub's device flow endpoints which block CORS from browsers.
+
+// POST /api/github/auth/device/code - Request a device code
+router.post('/auth/device/code', async (req, res) => {
+  try {
+    const response = await axios.post(
+      'https://github.com/login/device/code',
+      { client_id: GITHUB_DEVICE_CLIENT_ID, scope: 'repo,user' },
+      { headers: { Accept: 'application/json' }, timeout: 10000 }
+    );
+    res.json(response.data);
+  } catch (err) {
+    console.error('[Device Code Error]', err.message);
+    res.status(500).json({ error: 'Failed to request device code from GitHub.' });
+  }
+});
+
+// POST /api/github/auth/device/token - Poll for access token
+router.post('/auth/device/token', async (req, res) => {
+  try {
+    const { device_code } = req.body;
+    if (!device_code) return res.status(400).json({ error: 'device_code is required' });
+
+    const response = await axios.post(
+      'https://github.com/login/oauth/access_token',
+      {
+        client_id: GITHUB_DEVICE_CLIENT_ID,
+        device_code,
+        grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
+      },
+      { headers: { Accept: 'application/json' }, timeout: 10000 }
+    );
+    res.json(response.data);
+  } catch (err) {
+    console.error('[Device Token Error]', err.message);
+    res.status(500).json({ error: 'Failed to poll for token from GitHub.' });
+  }
+});
 
 // GET /api/github/auth/github-url - Get GitHub OAuth authorization URL
 router.get('/auth/github-url', (req, res) => {
   try {
-<<<<<<< HEAD
-    if (!GITHUB_CLIENT_ID || GITHUB_CLIENT_ID === 'your_github_client_id_here') {
+    if (!isOAuthConfigured) {
       return res.status(500).json({
-        error: 'GitHub OAuth Client ID is not configured in server/.env. Please set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET, or use a Personal Access Token / Demo Workspace.'
+        error: 'GitHub OAuth is not configured. Use the Device Flow login instead.'
       });
-=======
-    if (!GITHUB_CLIENT_ID) {
-      return res.status(500).json({ error: 'GitHub Client ID not configured' });
->>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
     }
 
     const githubOAuthUrl =
@@ -62,11 +106,7 @@ router.get('/auth/github-url', (req, res) => {
     res.json({ url: githubOAuthUrl });
   } catch (err) {
     console.error('[OAuth URL Error]', err);
-<<<<<<< HEAD
     res.status(500).json({ error: 'Failed to generate OAuth URL: ' + (err.message || err) });
-=======
-    res.status(500).json({ error: 'Failed to generate OAuth URL' });
->>>>>>> 1fedef5cdf2fa8631c20411f700509b8bbdcb0e2
   }
 });
 
