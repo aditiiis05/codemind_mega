@@ -345,7 +345,7 @@ body,
   height: 100%;
   margin: 0;
   padding: 0;
-  overflow: hidden; /* prevent the whole page from scrolling */
+  /* overflow is set per-page: IDE uses overflow-hidden, other pages scroll freely */
 }
 
 /* Base styles */
@@ -842,7 +842,6 @@ body {
   color: var(--color-text-primary);
   line-height: var(--line-height-normal);
   -webkit-font-smoothing: antialiased;
-  overflow: hidden;
 }
 
 a {

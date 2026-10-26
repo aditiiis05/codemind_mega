@@ -160,10 +160,11 @@ export default function HomePage() {
 
   // ── Main authenticated view ─────────────────────────────────────────────
   return (
-    <div style={{ minHeight: '100vh', background: '#0d1117', overflowY: 'auto', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#0d1117', fontFamily: 'system-ui, -apple-system, sans-serif', overflow: 'hidden' }}>
       {/* ── Top navigation bar ── */}
       <nav style={{
-        position: 'sticky', top: 0, zIndex: 50,
+        flexShrink: 0,
+        zIndex: 50,
         background: '#161b22', borderBottom: '1px solid #30363d',
         padding: '0 24px', height: 56,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -199,6 +200,7 @@ export default function HomePage() {
       </nav>
 
       {/* ── Page body ── */}
+      <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
       <div style={{ maxWidth: 960, margin: '0 auto', padding: '32px 24px 64px' }}>
 
         {/* ── Page heading ── */}
@@ -363,8 +365,8 @@ export default function HomePage() {
           </div>
         )}
       </div>
+      </div>
 
-      {/* Spinner keyframe */}
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>
   );
