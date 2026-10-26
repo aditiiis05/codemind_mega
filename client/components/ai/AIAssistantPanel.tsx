@@ -138,6 +138,7 @@ export default function AIAssistantPanel({
             fileName={currentFile}
             language={language}
             sessionId={sessionId}
+            editorSelection={editorSelection}
             onClearSelectedNode={onClearSelectedNode}
             onNavigateToCode={onNavigateToCode}
           />

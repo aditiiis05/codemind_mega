@@ -100,7 +100,7 @@ router.get('/health', async (req, res) => {
       service: 'CodeMind Agentic Tutor',
       ollama: {
         reachable: ollamaStatus.reachable,
-        configuredModel: defaultOrchestrator.model,
+        configuredModel: defaultOrchestrator.activeModel || defaultOrchestrator.model,
         availableModels: ollamaStatus.models
       },
       sandbox: {
