@@ -37,6 +37,7 @@ import { oneDark } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 
 import axios from 'axios';
 import { FlowNode } from '@/types/flowchart';
+import { EditorSelection } from '@/types/voice';
 import { askTutor, TutorEvidence } from '@/services/tutorApi';
 
 interface Message {
@@ -54,6 +55,7 @@ interface AIChatViewProps {
   fileName?: string | null;
   language?: string | null;
   sessionId?: string | null;
+  editorSelection?: EditorSelection | null;
   onClearSelectedNode?: () => void;
   onNavigateToCode?: (file: string, lineStart: number, lineEnd?: number) => void;
   onResetChat?: () => void;
@@ -75,6 +77,7 @@ export default function AIChatView({
   fileName = 'CodeEditor.tsx',
   language = 'typescript',
   sessionId = null,
+  editorSelection = null,
   onClearSelectedNode,
   onNavigateToCode
 }: AIChatViewProps) {
@@ -228,6 +231,7 @@ export default function AIChatView({
           code: code || '',
           fileName: fileName || '',
           language: language || '',
+          selection: editorSelection?.text || '',
           conversationHistory,
         });
 

@@ -19,24 +19,38 @@ if (!defaultToolRegistry.get('run_trace')) {
 class AgentOrchestrator {
   constructor(options = {}) {
     this.baseUrl = options.baseUrl || process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
-    this.model = options.model || process.env.OLLAMA_MODEL || 'qwen2.5-coder:7b';
+    this.model = options.model || process.env.OLLAMA_MODEL || 'qwen2.5-coder:3b';
+    this.activeModel = this.model;
     this.maxIterations = options.maxIterations || 5;
-    this.timeoutMs = options.timeoutMs || 30000; // 30s per model call
+    this.timeoutMs = options.timeoutMs || parseInt(process.env.OLLAMA_TIMEOUT_MS, 10) || 60000; // 60s per model call to match client and Ollama SDK
     this.toolRegistry = options.toolRegistry || defaultToolRegistry;
     this.groqApiKey = options.groqApiKey || process.env.GROQ_API_KEY || null;
   }
 
   /**
    * Checks if Ollama server is reachable and lists installed models
-   * @returns {Promise<{ reachable: boolean, models: string[], error?: string }>}
+   * @returns {Promise<{ reachable: boolean, models: string[], activeModel?: string, error?: string }>}
    */
   async checkOllamaHealth() {
     try {
       const response = await axios.get(`${this.baseUrl}/api/tags`, { timeout: 3000 });
       const models = (response.data?.models || []).map(m => m.name || m.model);
+      
+      // Auto-resolve active model: preferred exact match, then prefix match, then first available
+      if (models.includes(this.model)) {
+        this.activeModel = this.model;
+      } else if (models.length > 0) {
+        const prefix = this.model.split(':')[0];
+        const match = models.find(m => m === this.model || m.startsWith(prefix + ':') || m.startsWith(prefix));
+        this.activeModel = match || models.find(m => m.includes('qwen') || m.includes('coder')) || models[0];
+      } else {
+        this.activeModel = this.model;
+      }
+
       return {
         reachable: true,
-        models
+        models,
+        activeModel: this.activeModel
       };
     } catch (err) {
       return {
@@ -89,7 +103,7 @@ Guidelines:
    */
   async callOllamaChat(messages, tools) {
     const payload = {
-      model: this.model,
+      model: this.activeModel || this.model,
       messages,
       tools: tools && tools.length > 0 ? tools : undefined,
       stream: false,
@@ -114,24 +128,41 @@ Guidelines:
       throw new Error('Groq API key not configured for fallback.');
     }
 
-    const payload = {
-      model: 'llama-3.1-8b-instant',
-      messages,
-      tools: tools && tools.length > 0 ? tools : undefined,
-      tool_choice: 'auto',
-      temperature: 0.1
-    };
+    const candidateModels = [
+      process.env.GROQ_MODEL,
+      'qwen/qwen3.8-27b',
+      'allam-2-7b',
+      'llama-3.3-70b-versatile'
+    ].filter(Boolean);
 
-    const response = await axios.post('https://api.groq.com/openai/v1/chat/completions', payload, {
-      timeout: this.timeoutMs,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.groqApiKey}`
+    let lastError = null;
+    for (const model of candidateModels) {
+      try {
+        const payload = {
+          model,
+          messages,
+          tools: tools && tools.length > 0 ? tools : undefined,
+          tool_choice: tools && tools.length > 0 ? 'auto' : undefined,
+          temperature: 0.1
+        };
+
+        const response = await axios.post('https://api.groq.com/openai/v1/chat/completions', payload, {
+          timeout: this.timeoutMs,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.groqApiKey}`
+          }
+        });
+
+        const choice = response.data?.choices?.[0]?.message;
+        if (choice) return choice;
+      } catch (err) {
+        lastError = err;
+        console.warn(`[AgentOrchestrator] Groq model ${model} attempt failed: ${err.message}`);
       }
-    });
+    }
 
-    const choice = response.data?.choices?.[0]?.message;
-    return choice;
+    throw lastError || new Error('All Groq fallback models failed.');
   }
 
   /**
@@ -256,7 +287,7 @@ Guidelines:
           return {
             status: 'warning',
             mode: 'offline',
-            answer: `The local Ollama service is not running on ${this.baseUrl}, and no graph details were found for node "${node_id || 'unspecified'}". Please ensure Ollama is running (\`ollama serve\`) with model \`${this.model}\`.`,
+            answer: `The local Ollama service is not running on ${this.baseUrl}, and no graph details were found for node "${node_id || 'unspecified'}". Please ensure Ollama is running (\`ollama serve\`) with model \`${this.activeModel || this.model}\`.`,
             selected_node_id: node_id,
             evidence: [],
             tools_used: []
@@ -338,7 +369,7 @@ Guidelines:
           return {
             status: 'error',
             error: `Model request failed: ${callErr.message}`,
-            answer: `Unable to complete reasoning with model. Please check that Ollama is running with model ${this.model}.`,
+            answer: `Unable to complete reasoning with model. Please check that Ollama is running with model ${this.activeModel || this.model}.`,
             selected_node_id: node_id,
             evidence,
             tools_used: toolsUsed

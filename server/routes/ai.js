@@ -31,10 +31,11 @@ const ENV_OLLAMA_MODEL = (process.env.OLLAMA_MODEL || '').trim();
 // The env-configured model is tried first when set.
 const LOCAL_MODEL_CANDIDATES = [
   ...(ENV_OLLAMA_MODEL ? [ENV_OLLAMA_MODEL] : []),
-  'codemindai-gemma:latest',
-  'codegemma:2b',
+  'qwen2.5-coder:3b',
   'qwen2.5-coder:7b',
   'qwen2.5:3b',
+  'codemindai-gemma:latest',
+  'codegemma:2b',
   'llama3.2:3b',
   'mistral:7b'
 ];
@@ -1031,23 +1032,46 @@ router.post('/explain', async (req, res) => {
  * Uses local chat model with context, falls back to Groq.
  */
 router.post('/chat', async (req, res) => {
-  const { message, conversationHistory } = req.body;
+  const { message, conversationHistory, code, fileName, language, selection } = req.body;
 
   if (!message || typeof message !== 'string') return res.status(400).json({ error: 'No message provided' });
 
   try {
     console.log('[chat] Message length:', message.length);
 
+    let contextPrompt = '';
+    if (fileName || language) {
+      contextPrompt += `Active File: ${fileName || 'unnamed'} (${language || 'plaintext'})\n`;
+    }
+    if (selection && typeof selection === 'string' && selection.trim()) {
+      contextPrompt += `User Selected Code:\n\`\`\`${language || ''}\n${selection.trim()}\n\`\`\`\n`;
+    } else if (code && typeof code === 'string' && code.trim()) {
+      const maxLen = 3500;
+      const trimmed = code.length > maxLen ? code.slice(0, maxLen) + '\n// ... [truncated]' : code;
+      contextPrompt += `Code Context:\n\`\`\`${language || ''}\n${trimmed}\n\`\`\`\n`;
+    }
+
     const systemMsg = {
       role: 'system',
-      content: 'You are an expert AI coding assistant integrated into an IDE. Help with code analysis, debugging, refactoring, and programming questions. Provide clear, actionable answers; use code blocks when showing code.'
+      content: `You are CodeMind AI, an expert programming tutor and developer assistant integrated into an IDE.
+Your capabilities:
+1. Explain code and algorithms in simple, clear, educational terms with step-by-step logic breakdowns.
+2. Optimize and refactor code for performance, readability, and idiomatic clean patterns while strictly preserving its intended behavior.
+3. Identify potential bugs, runtime errors, edge cases, and suggest best practices.
+4. Answer follow-up questions accurately using the code and conversation context.
+5. Provide code solutions formatted with Markdown syntax highlighting.
+Always be concise, accurate, and helpful.${contextPrompt ? `\n\n${contextPrompt}` : ''}`
     };
 
     const messages = [systemMsg];
     if (Array.isArray(conversationHistory)) {
       // Only keep last N messages to avoid huge context
-      const trimmed = conversationHistory.slice(-12);
-      messages.push(...trimmed);
+      const trimmed = conversationHistory.slice(-8);
+      for (const msg of trimmed) {
+        if (msg && (msg.role === 'user' || msg.role === 'assistant') && typeof msg.content === 'string') {
+          messages.push({ role: msg.role, content: msg.content });
+        }
+      }
     }
 
     messages.push({ role: 'user', content: message });
