@@ -6,18 +6,17 @@
 
 import React, { useRef, useState, useEffect, useCallback, useMemo, useImperativeHandle, forwardRef } from 'react';
 
-// Named canvg import (ESM v4 async API)
-import { Canvg } from 'canvg';
-
 // Public API exposed via ref
 export interface FlowchartCanvasHandle {
   fitToScreen: () => void;
   resetLayout: () => void;
   centerNode: (nodeId: string) => void;
   downloadPNG: (exportFileName?: string) => Promise<void>;
+  zoomToCenter: (newZoom: number) => void;
 }
 import { FlowNode as FlowNodeType, FlowEdge as FlowEdgeType } from '@/types/flowchart';
 import FlowNode from './FlowNode';
+import { NODE_COLORS } from './nodeColors';
 
 interface FlowchartCanvasProps {
   nodes: FlowNodeType[];
@@ -38,6 +37,7 @@ interface FlowchartCanvasProps {
   showMinimap?: boolean;
   onNodeClick?: (node: FlowNodeType) => void;
   onResetLayout?: () => void;
+  onDownloadError?: (msg: string) => void;
 }
 
 // Helper: draw a rounded rectangle path (works on all browsers)
@@ -66,7 +66,8 @@ const FlowchartCanvasInner = (
     zoom,
     onZoomChange,
     showMinimap = true,
-    onNodeClick
+    onNodeClick,
+    onDownloadError,
   }: FlowchartCanvasProps,
   ref: React.Ref<FlowchartCanvasHandle>
 ) => {
@@ -204,128 +205,216 @@ const FlowchartCanvasInner = (
     });
   }, [effectiveNodes, zoom]);
 
-  // Download the entire diagram as a PNG image
+  // Download the entire diagram as a PNG image — pure Canvas 2D (no canvg/SVG serialization)
   const downloadPNG = useCallback(async (exportFileName?: string) => {
-    const innerEl = innerContainerRef.current;
-    const svgEl = svgRef.current;
-    if (!innerEl || !svgEl || effectiveNodes.length === 0) return;
+    if (effectiveNodes.length === 0) {
+      onDownloadError?.('No diagram to export.');
+      return;
+    }
 
-    const pad = 40;
-    const minX = Math.min(...effectiveNodes.map(n => n.x ?? 0)) - pad;
-    const minY = Math.min(...effectiveNodes.map(n => n.y ?? 0)) - pad;
-    const maxX = Math.max(...effectiveNodes.map(n => (n.x ?? 0) + (n.width ?? 200))) + pad;
-    const maxY = Math.max(...effectiveNodes.map(n => (n.y ?? 0) + (n.height ?? 70))) + pad;
+    const PAD = 60;
+    const minX = Math.min(...effectiveNodes.map(n => n.x ?? 0)) - PAD;
+    const minY = Math.min(...effectiveNodes.map(n => n.y ?? 0)) - PAD;
+    const maxX = Math.max(...effectiveNodes.map(n => (n.x ?? 0) + (n.width ?? 200))) + PAD;
+    const maxY = Math.max(...effectiveNodes.map(n => (n.y ?? 0) + (n.height ?? 70))) + PAD;
     const diagW = maxX - minX;
     const diagH = maxY - minY;
 
-    const SCALE = 2;
-    const offscreen = document.createElement('canvas');
-    offscreen.width = diagW * SCALE;
-    offscreen.height = diagH * SCALE;
-    const ctx = offscreen.getContext('2d');
-    if (!ctx) return;
+    const SCALE = 2; // 2× for retina-quality
+    const canvas = document.createElement('canvas');
+    canvas.width = diagW * SCALE;
+    canvas.height = diagH * SCALE;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) { onDownloadError?.('Canvas context unavailable.'); return; }
 
-    // Background fill
+    ctx.scale(SCALE, SCALE);
+
+    // ── Background ──────────────────────────────────────────────────────
     ctx.fillStyle = '#1e1e1e';
-    ctx.fillRect(0, 0, offscreen.width, offscreen.height);
+    ctx.fillRect(0, 0, diagW, diagH);
 
-    // Dot-grid background
-    const DOT_SPACING = 20 * SCALE;
-    ctx.fillStyle = 'rgba(255,255,255,0.07)';
-    for (let gx = ((-minX * SCALE) % DOT_SPACING + DOT_SPACING) % DOT_SPACING; gx < offscreen.width; gx += DOT_SPACING) {
-      for (let gy = ((-minY * SCALE) % DOT_SPACING + DOT_SPACING) % DOT_SPACING; gy < offscreen.height; gy += DOT_SPACING) {
+    // Subtle dot-grid
+    ctx.fillStyle = 'rgba(255,255,255,0.06)';
+    const DOT = 20;
+    for (let gx = (((-minX) % DOT) + DOT) % DOT; gx < diagW; gx += DOT) {
+      for (let gy = (((-minY) % DOT) + DOT) % DOT; gy < diagH; gy += DOT) {
         ctx.beginPath();
-        ctx.arc(gx, gy, 1.5, 0, Math.PI * 2);
+        ctx.arc(gx, gy, 1, 0, Math.PI * 2);
         ctx.fill();
       }
     }
 
-    // Temporarily remove pan/zoom transform so SVG coordinates are in layout space
-    const savedTransform = innerEl.style.transform;
-    innerEl.style.transform = 'none';
+    // Helper: translate layout coords → canvas coords
+    const tx = (x: number) => x - minX;
+    const ty = (y: number) => y - minY;
 
-    // Serialize SVG and render via canvg
-    const svgClone = svgEl.cloneNode(true) as SVGSVGElement;
-    svgClone.setAttribute('viewBox', `${minX} ${minY} ${diagW} ${diagH}`);
-    svgClone.setAttribute('width', String(diagW));
-    svgClone.setAttribute('height', String(diagH));
-    const svgString = new XMLSerializer().serializeToString(svgClone);
+    // ── Edges ────────────────────────────────────────────────────────────
+    // Build a quick node map for edge path calculation
+    const nMap = new Map<string, FlowNodeType>();
+    effectiveNodes.forEach(n => nMap.set(n.id, n));
 
-    try {
-      ctx.save();
-      ctx.scale(SCALE, SCALE);
-      const canvgInstance = await Canvg.from(ctx, svgString, {
-        ignoreMouse: true,
-        ignoreAnimation: true,
-        enableRedraw: false,
-      });
-      await canvgInstance.render();
-      ctx.restore();
-    } catch {
-      // canvg failed — SVG layer won't render but nodes will still be drawn below
-      ctx.restore();
-    }
-
-    // Restore transform
-    innerEl.style.transform = savedTransform;
-
-    // Node color scheme matching FlowNode component
-    const NODE_COLORS: Record<string, { border: string; bg: string; text: string }> = {
-      START:    { border: '#34d399', bg: '#064e3b', text: '#ffffff' },
-      END:      { border: '#f87171', bg: '#450a0a', text: '#ffffff' },
-      PROCESS:  { border: '#58a6ff', bg: '#0c1a2e', text: '#cccccc' },
-      DECISION: { border: '#f59e0b', bg: '#1c1207', text: '#ffffff' },
-      LOOP:     { border: '#818cf8', bg: '#1e1b4b', text: '#cccccc' },
-      FUNCTION: { border: '#c084fc', bg: '#2e1065', text: '#cccccc' },
-      INPUT:    { border: '#2dd4bf', bg: '#042f2e', text: '#cccccc' },
-      OUTPUT:   { border: '#38bdf8', bg: '#082f49', text: '#cccccc' },
-      RETURN:   { border: '#4ade80', bg: '#052e16', text: '#cccccc' },
-      ERROR:    { border: '#f87171', bg: '#450a0a', text: '#cccccc' },
-      FILE:     { border: '#22d3ee', bg: '#164e63', text: '#cccccc' },
+    // Edge color map
+    const edgeColor = (edge: FlowEdgeType): string => {
+      if (edge.label === 'YES' || edge.type === 'YES') return '#73c991';
+      if (edge.label === 'NO'  || edge.type === 'NO')  return '#f14c4c';
+      if (edge.label === 'CALLS'   || edge.type === 'CALLS')   return '#b180d7';
+      if (edge.label === 'IMPORTS' || edge.type === 'IMPORTS') return '#4fc1ff';
+      if (edge.label === 'LOOP'    || edge.type === 'LOOP')    return '#4fc1ff';
+      if (edge.label === 'RETURN'  || edge.type === 'RETURN')  return '#73c991';
+      return '#555555';
     };
 
-    ctx.save();
-    ctx.scale(SCALE, SCALE);
+    const isDashed = (edge: FlowEdgeType) =>
+      edge.type === 'CALLS' || edge.type === 'LOOP' || edge.type === 'RETURN';
+
+    // Draw arrowhead at (ex, ey) pointing in direction (dx, dy)
+    const drawArrow = (ctx: CanvasRenderingContext2D, ex: number, ey: number, dx: number, dy: number, color: string) => {
+      const len = Math.hypot(dx, dy);
+      if (len === 0) return;
+      const ux = dx / len; const uy = dy / len;
+      const size = 9;
+      ctx.beginPath();
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(ex - size * ux + size * 0.45 * (-uy), ey - size * uy + size * 0.45 * ux);
+      ctx.lineTo(ex - size * ux - size * 0.45 * (-uy), ey - size * uy - size * 0.45 * ux);
+      ctx.closePath();
+      ctx.fillStyle = color;
+      ctx.fill();
+    };
+
+    for (const edge of edges) {
+      const src = nMap.get(edge.source);
+      const tgt = nMap.get(edge.target);
+      if (!src || !tgt) continue;
+
+      const sw = src.width ?? 200; const sh = src.height ?? 70;
+      const tw = tgt.width ?? 200; const th = tgt.height ?? 70;
+      const sx = src.x ?? 0; const sy = src.y ?? 0;
+      const ex2 = tgt.x ?? 0; const ey2 = tgt.y ?? 0;
+
+      const isLoopback = ey2 <= sy;
+      const color = edgeColor(edge);
+
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.8;
+      ctx.setLineDash(isDashed(edge) ? [5, 3] : []);
+
+      let x1: number, y1: number, x2: number, y2: number;
+      let cp1x: number, cp1y: number, cp2x: number, cp2y: number;
+
+      if (isLoopback) {
+        x1 = tx(sx + sw); y1 = ty(sy + sh / 2);
+        x2 = tx(ex2 + tw); y2 = ty(ey2 + th / 2);
+        const off = Math.max(80, Math.abs(y1 - y2) * 0.4);
+        cp1x = x1 + off; cp1y = y1;
+        cp2x = x2 + off; cp2y = y2;
+      } else {
+        x1 = tx(sx + sw / 2); y1 = ty(sy + sh);
+        if (src.type === 'DECISION') {
+          if (edge.label === 'YES' || edge.type === 'YES') x1 = tx(sx + sw * 0.25);
+          else if (edge.label === 'NO' || edge.type === 'NO') x1 = tx(sx + sw * 0.75);
+        }
+        x2 = tx(ex2 + tw / 2); y2 = ty(ey2);
+        const dy = y2 - y1;
+        cp1x = x1; cp1y = y1 + dy * 0.45;
+        cp2x = x2; cp2y = y2 - dy * 0.45;
+      }
+
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x2, y2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Arrowhead at end
+      const tdx = x2 - cp2x; const tdy = y2 - cp2y;
+      drawArrow(ctx, x2, y2, tdx, tdy, color);
+
+      // Edge label
+      if (edge.label) {
+        const midX = (x1 + 3 * cp1x + 3 * cp2x + x2) / 8;
+        const midY = (y1 + 3 * cp1y + 3 * cp2y + y2) / 8;
+        const lw = 44; const lh = 18;
+        ctx.fillStyle = '#252526';
+        roundRect(ctx, midX - lw / 2, midY - lh / 2, lw, lh, 4);
+        ctx.fill();
+        ctx.strokeStyle = '#3c3c3c'; ctx.lineWidth = 1;
+        roundRect(ctx, midX - lw / 2, midY - lh / 2, lw, lh, 4);
+        ctx.stroke();
+        ctx.fillStyle = color;
+        ctx.font = 'bold 9px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(edge.label, midX, midY);
+        ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+      }
+    }
+
+    // ── Nodes ────────────────────────────────────────────────────────────
     for (const node of effectiveNodes) {
-      const nx = (node.x ?? 0) - minX;
-      const ny = (node.y ?? 0) - minY;
+      const nx = tx(node.x ?? 0);
+      const ny = ty(node.y ?? 0);
       const nw = node.width ?? 200;
       const nh = node.height ?? 70;
       const colors = NODE_COLORS[node.type] ?? NODE_COLORS['PROCESS'];
 
-      // Background rect
+      // Shadow
+      ctx.shadowColor = colors.border + '40';
+      ctx.shadowBlur = 8;
+
+      // Background
       ctx.fillStyle = colors.bg;
-      roundRect(ctx, nx, ny, nw, nh, 6);
+      roundRect(ctx, nx, ny, nw, nh, 8);
       ctx.fill();
+      ctx.shadowBlur = 0;
 
       // Border
       ctx.strokeStyle = colors.border;
       ctx.lineWidth = 1.5;
-      roundRect(ctx, nx, ny, nw, nh, 6);
+      roundRect(ctx, nx, ny, nw, nh, 8);
       ctx.stroke();
 
-      // Type badge pill
-      ctx.fillStyle = colors.border + '33';
-      roundRect(ctx, nx + 6, ny + 6, 54, 14, 3);
+      // Type badge
+      const badgeW = Math.min(nw - 12, ctx.measureText(node.type).width + 16);
+      ctx.fillStyle = colors.border + '30';
+      roundRect(ctx, nx + 8, ny + 7, badgeW, 14, 3);
       ctx.fill();
       ctx.fillStyle = colors.border;
       ctx.font = 'bold 8px monospace';
-      ctx.fillText(node.type, nx + 10, ny + 17);
+      ctx.textBaseline = 'middle';
+      ctx.fillText(node.type, nx + 12, ny + 14);
 
-      // Label text
+      // Label
       ctx.fillStyle = colors.text;
-      ctx.font = '11px monospace';
-      const maxChars = Math.floor(nw / 7.5);
-      const labelStr = node.label.length > maxChars
-        ? node.label.slice(0, maxChars - 1) + '…'
-        : node.label;
-      ctx.fillText(labelStr, nx + 10, ny + nh / 2 + 4);
-    }
-    ctx.restore();
+      ctx.font = '11px -apple-system, BlinkMacSystemFont, monospace';
+      ctx.textBaseline = 'middle';
+      const maxW = nw - 16;
+      let labelStr = node.label;
+      while (ctx.measureText(labelStr).width > maxW && labelStr.length > 4) {
+        labelStr = labelStr.slice(0, -1);
+      }
+      if (labelStr !== node.label) labelStr = labelStr.slice(0, -1) + '…';
+      ctx.fillText(labelStr, nx + 10, ny + nh / 2 + 8);
 
-    // Trigger browser download
-    offscreen.toBlob((blob) => {
-      if (!blob) return;
+      // Line number badge (bottom right)
+      if (node.lineStart) {
+        const lineStr = `Ln ${node.lineStart}`;
+        const lw2 = ctx.measureText(lineStr).width + 8;
+        ctx.fillStyle = '#1e1e1e';
+        roundRect(ctx, nx + nw - lw2 - 4, ny + nh - 16, lw2, 12, 2);
+        ctx.fill();
+        ctx.fillStyle = '#555555';
+        ctx.font = '8px monospace';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(lineStr, nx + nw - lw2 - 1, ny + nh - 10);
+      }
+
+      ctx.textBaseline = 'alphabetic';
+    }
+
+    // ── Download ─────────────────────────────────────────────────────────
+    canvas.toBlob((blob) => {
+      if (!blob) { onDownloadError?.('Failed to generate PNG blob.'); return; }
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       const today = new Date().toISOString().slice(0, 10);
@@ -336,7 +425,7 @@ const FlowchartCanvasInner = (
       document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(url), 5000);
     }, 'image/png');
-  }, [effectiveNodes]);
+  }, [effectiveNodes, edges, onDownloadError]);
 
   // Expose fitToScreen, resetLayout, centerNode, and downloadPNG to parent via ref
   useImperativeHandle(ref, () => ({
@@ -351,25 +440,58 @@ const FlowchartCanvasInner = (
       centerNode(nodeId);
     },
     downloadPNG: (exportFileName?: string) => downloadPNG(exportFileName),
-  }), [fitGraph, resetLayout, centerNode, downloadPNG]);
+    zoomToCenter: (newZoom: number) => {
+      if (!containerRef.current) { onZoomChange(newZoom); return; }
+      const cW = containerRef.current.clientWidth;
+      const cH = containerRef.current.clientHeight;
+      const current = zoomRef.current;
+      if (current === 0) { onZoomChange(newZoom); return; }
+      const factor = newZoom / current;
+      setZoomAndPanRef.current(factor, cW / 2, cH / 2);
+    },
+  }), [fitGraph, resetLayout, centerNode, downloadPNG, onZoomChange]);
 
-  // Mouse wheel zoom & pan
-  const handleWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
+  // Mouse wheel zoom (toward cursor) & pan — handled by native listener above, kept for reference
+  // The useCallback below is unused but left for the setZoomAndPan helper
 
-    if (e.ctrlKey || e.metaKey) {
-      // Zoom
-      const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
-      const newZoom = Math.min(Math.max(0.2, zoom * zoomFactor), 2.5);
-      onZoomChange(newZoom);
-    } else {
-      // Pan
-      setPan(prev => ({
-        x: prev.x - e.deltaX,
-        y: prev.y - e.deltaY
-      }));
-    }
-  };
+  // Zoom toward a screen point — stored in a ref so the wheel handler always gets the latest version
+  const zoomRef = useRef(zoom);
+  useEffect(() => { zoomRef.current = zoom; }, [zoom]);
+
+  const setZoomAndPanFn = useCallback((factor: number, screenX: number, screenY: number) => {
+    const current = zoomRef.current;
+    const newZoom = Math.min(Math.max(0.15, current * factor), 3.0);
+    setPan(prev => ({
+      x: screenX - (screenX - prev.x) * (newZoom / current),
+      y: screenY - (screenY - prev.y) * (newZoom / current),
+    }));
+    onZoomChange(newZoom);
+  }, [onZoomChange]);
+
+  const setZoomAndPanRef = useRef(setZoomAndPanFn);
+  useEffect(() => { setZoomAndPanRef.current = setZoomAndPanFn; }, [setZoomAndPanFn]);
+
+  // Attach wheel listener as non-passive so preventDefault works
+  // Uses a ref to setZoomAndPan so the [] deps effect always calls the latest implementation
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const rect = el.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+
+      if (e.ctrlKey || e.metaKey || (Math.abs(e.deltaY) > 0 && Math.abs(e.deltaY) >= Math.abs(e.deltaX))) {
+        const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
+        setZoomAndPanRef.current(factor, mouseX, mouseY);
+      } else {
+        setPan(prev => ({ x: prev.x - e.deltaX, y: prev.y - e.deltaY }));
+      }
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, []);
 
   // Drag canvas background to pan
   const handleCanvasMouseDown = (e: React.MouseEvent) => {
@@ -557,7 +679,6 @@ const FlowchartCanvasInner = (
   return (
     <div
       ref={containerRef}
-      onWheel={handleWheel}
       onMouseDown={handleCanvasMouseDown}
       className={`relative w-full h-full overflow-hidden bg-[#1e1e1e] select-none ${
         draggedNodeId ? 'cursor-grabbing' : isDragging ? 'cursor-grabbing' : 'cursor-grab'

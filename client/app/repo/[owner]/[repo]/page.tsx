@@ -82,6 +82,9 @@ export default function RepoPage() {
   const [streamingAnalysis, setStreamingAnalysis] = useState('');
   const [visualizationTrigger, setVisualizationTrigger] = useState<{ type: 'flowchart' | 'mindmap' | null; timestamp?: number }>({ type: null }); // eslint-disable-line @typescript-eslint/no-unused-vars
 
+  // Tracks whether the first file has been auto-opened for the current repo
+  const hasAutoOpenedRef = useRef(false);
+
   // Flowchart & Code Navigation States
   const [highlightRange, setHighlightRange] = useState<{ lineStart: number; lineEnd: number; source?: string } | null>(null);
   const [cursorLine, setCursorLine] = useState<number | null>(null);
@@ -473,6 +476,8 @@ export default function CodeEditor() {
 
   useEffect(() => {
     hasAutoOpenedRef.current = false;
+    setSelectedFile(null);
+    setFileContent('');
     fetchRepoContent('');
   }, [fetchRepoContent]);
 
@@ -619,19 +624,33 @@ export default function MermaidChart({ chart }: { chart: string }) {
   }, [owner, repo]);
 
   // Auto-open first file when root tree first loads
-  const hasAutoOpenedRef = useRef(false);
   useEffect(() => {
-    if (hasAutoOpenedRef.current || repoContent.length === 0 || selectedFile) return;
+    // Skip if already opened, tree is empty, or a file is already selected
+    // Note: we clear selectedFile on repo change, so this guard is safe
+    if (hasAutoOpenedRef.current || repoContent.length === 0) return;
+    // Search root level first
     const autoOpen =
       repoContent.find(f => f.type === 'file' && f.name.toLowerCase() === 'readme.md') ||
       repoContent.find(f => f.type === 'file' && f.name.endsWith('.md')) ||
-      repoContent.find(f => f.type === 'file' && /\.(ts|js|py|java|go|rs)$/.test(f.name)) ||
+      repoContent.find(f => f.type === 'file' && /\.(ts|js|py|java|go|rs|tsx|jsx)$/.test(f.name)) ||
       repoContent.find(f => f.type === 'file');
     if (autoOpen) {
       hasAutoOpenedRef.current = true;
       fetchFileContent(autoOpen);
+      return;
     }
-  }, [repoContent, selectedFile, fetchFileContent]);
+    // Monorepo fallback: root has only dirs — search first expanded subdir
+    const allFlatFiles = Object.values(dirContents).flat();
+    const fallback =
+      allFlatFiles.find(f => f.type === 'file' && f.name.toLowerCase() === 'readme.md') ||
+      allFlatFiles.find(f => f.type === 'file' && f.name.endsWith('.md')) ||
+      allFlatFiles.find(f => f.type === 'file' && /\.(ts|js|py|java|go|rs|tsx|jsx)$/.test(f.name)) ||
+      allFlatFiles.find(f => f.type === 'file');
+    if (fallback) {
+      hasAutoOpenedRef.current = true;
+      fetchFileContent(fallback);
+    }
+  }, [repoContent, dirContents, fetchFileContent]);
 
   const handleItemClick = useCallback((item: GitHubFile) => {
     if (item.type === 'dir') {

@@ -52,16 +52,15 @@ export default function FlowchartModal({
     return () => window.removeEventListener('keydown', handler);
   }, [isOpen, onClose]);
 
-  // Prevent body scroll while open
+  // Prevent body scroll while open — save and restore original value
   useEffect(() => {
     if (isOpen) {
+      const prev = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
+      return () => {
+        document.body.style.overflow = prev;
+      };
     }
-    return () => {
-      document.body.style.overflow = '';
-    };
   }, [isOpen]);
 
   if (!isOpen) return null;
@@ -72,9 +71,13 @@ export default function FlowchartModal({
       role="dialog"
       aria-modal="true"
       aria-label="Code Flowchart — Full View"
+      onClick={onClose}
     >
       {/* Modal chrome header */}
-      <div className="h-10 px-4 bg-[#252526] border-b border-[#2b2b2b] flex items-center justify-between shrink-0 select-none">
+      <div
+        className="h-10 px-4 bg-[#252526] border-b border-[#2b2b2b] flex items-center justify-between shrink-0 select-none"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center gap-2">
           <div className="w-5 h-5 rounded bg-[#1e1e1e] border border-[#3c3c3c] flex items-center justify-center shrink-0">
             <Network size={12} className="text-[#007acc]" />
@@ -107,7 +110,7 @@ export default function FlowchartModal({
       </div>
 
       {/* Panel body — flex-1 so it fills the rest of the overlay */}
-      <div className="flex-1 min-h-0 overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-hidden" onClick={(e) => e.stopPropagation()}>
         <FlowchartPanel
           code={code}
           fileName={fileName}

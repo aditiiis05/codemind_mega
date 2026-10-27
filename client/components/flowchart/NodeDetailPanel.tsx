@@ -34,8 +34,7 @@ import {
   Check,
   ChevronDown,
   ChevronUp,
-  ExternalLink,
-  Layers
+  ExternalLink
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -168,6 +167,52 @@ export default function NodeDetailPanel({
     document.addEventListener('mouseup', onUp);
   }, [height, isCollapsed]);
 
+  // Extract source code snippet — must be before early return (rules of hooks)
+  const codeSnippetLines = useMemo(() => {
+    if (!node || !code || !node.lineStart) return null;
+    const lines = code.split('\n');
+    const start = Math.max(1, node.lineStart - 1);
+    const end = Math.min(lines.length, (node.lineEnd || node.lineStart) + 1);
+    return lines.slice(start - 1, end).map((text, i) => {
+      const lineNum = start + i;
+      const isTarget = lineNum >= node.lineStart! && lineNum <= (node.lineEnd || node.lineStart!);
+      return { lineNum, text, isTarget };
+    });
+  }, [code, node?.lineStart, node?.lineEnd, node]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Quick inquiry prompts — must be before early return (rules of hooks)
+  const suggestedPrompts = useMemo(() => {
+    const type = node?.type ?? '';
+    const isDecisionType = type === 'DECISION';
+    const isLoopType = type === 'LOOP';
+    if (isDecisionType) {
+      return [
+        'Why does this condition have two branches?',
+        'What conditions trigger the TRUE branch?',
+        'What leads to this decision in the flow?'
+      ];
+    }
+    if (isLoopType) {
+      return [
+        'When does this loop terminate?',
+        'Explain the loop continuation check',
+        'Are there any potential infinite loop risks?'
+      ];
+    }
+    if (type === 'FUNCTION') {
+      return [
+        'What callers invoke this function?',
+        'Explain the function signature & logic',
+        'Show function dependencies'
+      ];
+    }
+    return [
+      'Explain what this statement does',
+      'Trace control flow reaching here',
+      'Are there variable side-effects?'
+    ];
+  }, [node?.type]);
+
   if (!node) return null;
 
   const meta = getTypeMeta(node.type);
@@ -190,49 +235,6 @@ export default function NodeDetailPanel({
   const isLoop = node.type === 'LOOP';
   const yesBranch = outgoing.find(e => (e.label || '').toUpperCase() === 'YES' || (e.label || '').toUpperCase() === 'TRUE');
   const noBranch  = outgoing.find(e => (e.label || '').toUpperCase() === 'NO' || (e.label || '').toUpperCase() === 'FALSE');
-
-  // Extract source code snippet around node's lineStart..lineEnd
-  const codeSnippetLines = useMemo(() => {
-    if (!code || !node.lineStart) return null;
-    const lines = code.split('\n');
-    const start = Math.max(1, node.lineStart - 1);
-    const end = Math.min(lines.length, (node.lineEnd || node.lineStart) + 1);
-    return lines.slice(start - 1, end).map((text, i) => {
-      const lineNum = start + i;
-      const isTarget = lineNum >= node.lineStart! && lineNum <= (node.lineEnd || node.lineStart!);
-      return { lineNum, text, isTarget };
-    });
-  }, [code, node.lineStart, node.lineEnd]);
-
-  // Quick inquiry prompts tailored to node type
-  const suggestedPrompts = useMemo(() => {
-    if (isDecision) {
-      return [
-        'Why does this condition have two branches?',
-        'What conditions trigger the TRUE branch?',
-        'What leads to this decision in the flow?'
-      ];
-    }
-    if (isLoop) {
-      return [
-        'When does this loop terminate?',
-        'Explain the loop continuation check',
-        'Are there any potential infinite loop risks?'
-      ];
-    }
-    if (node.type === 'FUNCTION') {
-      return [
-        'What callers invoke this function?',
-        'Explain the function signature & logic',
-        'Show function dependencies'
-      ];
-    }
-    return [
-      'Explain what this statement does',
-      'Trace control flow reaching here',
-      'Are there variable side-effects?'
-    ];
-  }, [isDecision, isLoop, node.type]);
 
   const copyToClipboard = (text: string, id: string) => {
     navigator.clipboard.writeText(text);

@@ -422,10 +422,18 @@ export default function FlowchartPanel({
   // Canvas ref for fit-to-screen & centerNode
   const canvasRef = useRef<FlowchartCanvasHandle>(null);
 
-  // Zoom handlers
-  const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.15, 2.5));
-  const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.15, 0.3));
-  const handleResetZoom = () => setZoom(1.0);
+  // Zoom handlers — zoom toward canvas center via ref
+  const handleZoomIn = () => {
+    const next = Math.min(zoom + 0.15, 3.0);
+    if (canvasRef.current) { canvasRef.current.zoomToCenter(next); } else { setZoom(next); }
+  };
+  const handleZoomOut = () => {
+    const next = Math.max(zoom - 0.15, 0.15);
+    if (canvasRef.current) { canvasRef.current.zoomToCenter(next); } else { setZoom(next); }
+  };
+  const handleResetZoom = () => {
+    if (canvasRef.current) { canvasRef.current.zoomToCenter(1.0); } else { setZoom(1.0); }
+  };
   const handleFitToScreen = () => canvasRef.current?.fitToScreen();
 
   // Download PNG handler

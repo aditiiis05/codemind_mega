@@ -1,0 +1,26 @@
+{
+  "verdict": "CHANGES_REQUESTED",
+  "findings": [
+    {
+      "label": "hasAutoOpenedRef declared after its useEffect",
+      "detail": "The useRef(false) declaration appears after both useEffect calls that reference it. Safe at runtime but triggers ESLint no-use-before-define and obscures data flow. Move it before the first effect that uses it.",
+      "confidence": "confirmed"
+    },
+    {
+      "label": "Auto-open skips directory-only repo roots",
+      "detail": "All four arms of the auto-open selection filter f.type === 'file'. Monorepos or repos whose root is all directories (packages/, apps/, src/) will never auto-open a file, leaving the editor blank. Extend the search into dirContents or pre-expand the first directory.",
+      "confidence": "likely"
+    },
+    {
+      "label": "selectedFile guard races on repo switch",
+      "detail": "The auto-open effect checks '|| selectedFile' and exits if it is non-null. On repo switch the previous file is not cleared when fetchRepoContent('') is called, so the guard fires and the new repo never gets an auto-opened file. Fix by adding setSelectedFile(null) at the top of fetchRepoContent when path === ''.",
+      "confidence": "possible"
+    },
+    {
+      "label": "Build result unverifiable",
+      "detail": "No tsc --noEmit or npm run build output was provided. The changes appear syntactically consistent but TypeScript errors cannot be ruled out without the actual compiler output.",
+      "confidence": "confirmed"
+    }
+  ],
+  "reviewDoc": "c:\\Users\\Aditi\\codemind_mega\\client\\.agents\\tasks\\review.md"
+}
