@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import axios from 'axios';
 import { AlertCircle } from 'lucide-react';
@@ -67,7 +67,7 @@ export default function RepoPage() {
   const router = useRouter();
   const { owner, repo } = params as { owner: string; repo: string };
 
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState('');
   // allFiles accumulates every fetched GitHubFile across all directory expansions
@@ -472,6 +472,7 @@ export default function CodeEditor() {
   }, [owner, repo, router]);
 
   useEffect(() => {
+    hasAutoOpenedRef.current = false;
     fetchRepoContent('');
   }, [fetchRepoContent]);
 
@@ -616,6 +617,21 @@ export default function MermaidChart({ chart }: { chart: string }) {
       setIsLoadingFile(false);
     }
   }, [owner, repo]);
+
+  // Auto-open first file when root tree first loads
+  const hasAutoOpenedRef = useRef(false);
+  useEffect(() => {
+    if (hasAutoOpenedRef.current || repoContent.length === 0 || selectedFile) return;
+    const autoOpen =
+      repoContent.find(f => f.type === 'file' && f.name.toLowerCase() === 'readme.md') ||
+      repoContent.find(f => f.type === 'file' && f.name.endsWith('.md')) ||
+      repoContent.find(f => f.type === 'file' && /\.(ts|js|py|java|go|rs)$/.test(f.name)) ||
+      repoContent.find(f => f.type === 'file');
+    if (autoOpen) {
+      hasAutoOpenedRef.current = true;
+      fetchFileContent(autoOpen);
+    }
+  }, [repoContent, selectedFile, fetchFileContent]);
 
   const handleItemClick = useCallback((item: GitHubFile) => {
     if (item.type === 'dir') {
@@ -861,7 +877,7 @@ export default function MermaidChart({ chart }: { chart: string }) {
         code={selectedFile ? fileContent : null}
         fileName={selectedFile?.name || null}
         language={selectedFile ? getLanguage(selectedFile.name) : null}
-        repoFiles={repoContent.map(f => ({ path: f.path, name: f.name, size: f.size }))}
+        repoFiles={allFiles.map(f => ({ path: f.path, name: f.name, size: f.size }))}
         owner={owner}
         repo={repo}
         cursorLine={cursorLine}

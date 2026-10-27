@@ -63,6 +63,7 @@ export default function HomePage() {
   const [error, setError] = useState('');
   const [hasCallbackToken, setHasCallbackToken] = useState(false);
   const [userLogin, setUserLogin] = useState('');
+  const [navigatingTo, setNavigatingTo] = useState<string | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -128,6 +129,7 @@ export default function HomePage() {
   };
 
   const handleRepoSelect = (owner: string, repo: string) => {
+    setNavigatingTo(`${owner}/${repo}`);
     router.push(`/repo/${owner}/${repo}`);
   };
 
@@ -272,6 +274,7 @@ export default function HomePage() {
                     background: '#161b22', border: '1px solid #21262d',
                     borderRadius: 8, cursor: 'pointer', transition: 'all 0.12s',
                     marginBottom: 6,
+                    opacity: navigatingTo === `${repo.owner.login}/${repo.name}` ? 0.7 : 1,
                   }}
                   onMouseEnter={e => {
                     const b = e.currentTarget as HTMLButtonElement;
@@ -286,10 +289,13 @@ export default function HomePage() {
                 >
                   {/* Icon */}
                   <div style={{ flexShrink: 0, width: 36, height: 36, borderRadius: 8, background: '#21262d', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {repo.private
-                      ? <BookOpen style={{ width: 16, height: 16, color: '#8b949e' }} />
-                      : <Github style={{ width: 16, height: 16, color: '#8b949e' }} />
-                    }
+                    {navigatingTo === `${repo.owner.login}/${repo.name}` ? (
+                      <Loader2 style={{width: 16, height: 16, color: '#2f81f7', animation: 'spin 1s linear infinite'}} />
+                    ) : repo.private ? (
+                      <BookOpen style={{ width: 16, height: 16, color: '#8b949e' }} />
+                    ) : (
+                      <Github style={{ width: 16, height: 16, color: '#8b949e' }} />
+                    )}
                   </div>
 
                   {/* Main content */}

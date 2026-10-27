@@ -8,6 +8,7 @@ import {
   type ReactNode,
   useMemo,
 } from 'react';
+import { useRouter } from 'next/navigation';
 import StatusBar from './StatusBar';
 import Panel from './Panel';
 import EditorTabs, { type EditorTab } from './EditorTabs';
@@ -119,6 +120,8 @@ export default function IDELayout({
   repoOwner = 'codemind',
   repoName = 'core',
 }: IDELayoutProps) {
+  const router = useRouter();
+
   // Proportions matching ~1670x900 viewport: left ~335px, right ~440px
   const [leftWidth, setLeftWidth] = useState(335);
   const [rightWidth, setRightWidth] = useState(440);
@@ -223,6 +226,15 @@ export default function IDELayout({
       <header className="h-[32px] shrink-0 bg-[#1e1e1e] border-b border-[#2b2b2b] flex items-center justify-between px-3 z-30 select-none">
         {/* Left: Classic Menu items */}
         <div className="flex items-center gap-0.5 text-xs text-[#969696]">
+          <button
+            type="button"
+            onClick={() => router.push('/')}
+            className="flex items-center gap-1 px-2 py-0.5 rounded text-xs text-[#858585] hover:text-white hover:bg-[#2a2d2e] transition-colors cursor-pointer mr-1 border-r border-[#2b2b2b] pr-2"
+            title="Back to Repositories"
+          >
+            <ChevronLeft size={12} />
+            <span>Repos</span>
+          </button>
           <button type="button" className="px-2 py-0.5 rounded text-xs hover:text-white hover:bg-[#2a2d2e] transition-colors cursor-pointer">File</button>
           <button type="button" className="px-2 py-0.5 rounded text-xs hover:text-white hover:bg-[#2a2d2e] transition-colors cursor-pointer">Edit</button>
           <button type="button" className="px-2 py-0.5 rounded text-xs hover:text-white hover:bg-[#2a2d2e] transition-colors cursor-pointer">Selection</button>
