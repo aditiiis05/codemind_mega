@@ -6,11 +6,15 @@
 
 import React, { useRef, useState, useEffect, useCallback, useMemo, useImperativeHandle, forwardRef } from 'react';
 
+// Named canvg import (ESM v4 async API)
+import { Canvg } from 'canvg';
+
 // Public API exposed via ref
 export interface FlowchartCanvasHandle {
   fitToScreen: () => void;
   resetLayout: () => void;
   centerNode: (nodeId: string) => void;
+  downloadPNG: (exportFileName?: string) => Promise<void>;
 }
 import { FlowNode as FlowNodeType, FlowEdge as FlowEdgeType } from '@/types/flowchart';
 import FlowNode from './FlowNode';
@@ -36,6 +40,21 @@ interface FlowchartCanvasProps {
   onResetLayout?: () => void;
 }
 
+// Helper: draw a rounded rectangle path (works on all browsers)
+function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
 const FlowchartCanvasInner = (
   {
     nodes,
@@ -52,6 +71,8 @@ const FlowchartCanvasInner = (
   ref: React.Ref<FlowchartCanvasHandle>
 ) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const innerContainerRef = useRef<HTMLDivElement>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
 
   // Pan offset state
   const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -183,7 +204,141 @@ const FlowchartCanvasInner = (
     });
   }, [effectiveNodes, zoom]);
 
-  // Expose fitToScreen, resetLayout, and centerNode to parent via ref
+  // Download the entire diagram as a PNG image
+  const downloadPNG = useCallback(async (exportFileName?: string) => {
+    const innerEl = innerContainerRef.current;
+    const svgEl = svgRef.current;
+    if (!innerEl || !svgEl || effectiveNodes.length === 0) return;
+
+    const pad = 40;
+    const minX = Math.min(...effectiveNodes.map(n => n.x ?? 0)) - pad;
+    const minY = Math.min(...effectiveNodes.map(n => n.y ?? 0)) - pad;
+    const maxX = Math.max(...effectiveNodes.map(n => (n.x ?? 0) + (n.width ?? 200))) + pad;
+    const maxY = Math.max(...effectiveNodes.map(n => (n.y ?? 0) + (n.height ?? 70))) + pad;
+    const diagW = maxX - minX;
+    const diagH = maxY - minY;
+
+    const SCALE = 2;
+    const offscreen = document.createElement('canvas');
+    offscreen.width = diagW * SCALE;
+    offscreen.height = diagH * SCALE;
+    const ctx = offscreen.getContext('2d');
+    if (!ctx) return;
+
+    // Background fill
+    ctx.fillStyle = '#1e1e1e';
+    ctx.fillRect(0, 0, offscreen.width, offscreen.height);
+
+    // Dot-grid background
+    const DOT_SPACING = 20 * SCALE;
+    ctx.fillStyle = 'rgba(255,255,255,0.07)';
+    for (let gx = ((-minX * SCALE) % DOT_SPACING + DOT_SPACING) % DOT_SPACING; gx < offscreen.width; gx += DOT_SPACING) {
+      for (let gy = ((-minY * SCALE) % DOT_SPACING + DOT_SPACING) % DOT_SPACING; gy < offscreen.height; gy += DOT_SPACING) {
+        ctx.beginPath();
+        ctx.arc(gx, gy, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // Temporarily remove pan/zoom transform so SVG coordinates are in layout space
+    const savedTransform = innerEl.style.transform;
+    innerEl.style.transform = 'none';
+
+    // Serialize SVG and render via canvg
+    const svgClone = svgEl.cloneNode(true) as SVGSVGElement;
+    svgClone.setAttribute('viewBox', `${minX} ${minY} ${diagW} ${diagH}`);
+    svgClone.setAttribute('width', String(diagW));
+    svgClone.setAttribute('height', String(diagH));
+    const svgString = new XMLSerializer().serializeToString(svgClone);
+
+    try {
+      ctx.save();
+      ctx.scale(SCALE, SCALE);
+      const canvgInstance = await Canvg.from(ctx, svgString, {
+        ignoreMouse: true,
+        ignoreAnimation: true,
+        enableRedraw: false,
+      });
+      await canvgInstance.render();
+      ctx.restore();
+    } catch {
+      // canvg failed — SVG layer won't render but nodes will still be drawn below
+      ctx.restore();
+    }
+
+    // Restore transform
+    innerEl.style.transform = savedTransform;
+
+    // Node color scheme matching FlowNode component
+    const NODE_COLORS: Record<string, { border: string; bg: string; text: string }> = {
+      START:    { border: '#34d399', bg: '#064e3b', text: '#ffffff' },
+      END:      { border: '#f87171', bg: '#450a0a', text: '#ffffff' },
+      PROCESS:  { border: '#58a6ff', bg: '#0c1a2e', text: '#cccccc' },
+      DECISION: { border: '#f59e0b', bg: '#1c1207', text: '#ffffff' },
+      LOOP:     { border: '#818cf8', bg: '#1e1b4b', text: '#cccccc' },
+      FUNCTION: { border: '#c084fc', bg: '#2e1065', text: '#cccccc' },
+      INPUT:    { border: '#2dd4bf', bg: '#042f2e', text: '#cccccc' },
+      OUTPUT:   { border: '#38bdf8', bg: '#082f49', text: '#cccccc' },
+      RETURN:   { border: '#4ade80', bg: '#052e16', text: '#cccccc' },
+      ERROR:    { border: '#f87171', bg: '#450a0a', text: '#cccccc' },
+      FILE:     { border: '#22d3ee', bg: '#164e63', text: '#cccccc' },
+    };
+
+    ctx.save();
+    ctx.scale(SCALE, SCALE);
+    for (const node of effectiveNodes) {
+      const nx = (node.x ?? 0) - minX;
+      const ny = (node.y ?? 0) - minY;
+      const nw = node.width ?? 200;
+      const nh = node.height ?? 70;
+      const colors = NODE_COLORS[node.type] ?? NODE_COLORS['PROCESS'];
+
+      // Background rect
+      ctx.fillStyle = colors.bg;
+      roundRect(ctx, nx, ny, nw, nh, 6);
+      ctx.fill();
+
+      // Border
+      ctx.strokeStyle = colors.border;
+      ctx.lineWidth = 1.5;
+      roundRect(ctx, nx, ny, nw, nh, 6);
+      ctx.stroke();
+
+      // Type badge pill
+      ctx.fillStyle = colors.border + '33';
+      roundRect(ctx, nx + 6, ny + 6, 54, 14, 3);
+      ctx.fill();
+      ctx.fillStyle = colors.border;
+      ctx.font = 'bold 8px monospace';
+      ctx.fillText(node.type, nx + 10, ny + 17);
+
+      // Label text
+      ctx.fillStyle = colors.text;
+      ctx.font = '11px monospace';
+      const maxChars = Math.floor(nw / 7.5);
+      const labelStr = node.label.length > maxChars
+        ? node.label.slice(0, maxChars - 1) + '…'
+        : node.label;
+      ctx.fillText(labelStr, nx + 10, ny + nh / 2 + 4);
+    }
+    ctx.restore();
+
+    // Trigger browser download
+    offscreen.toBlob((blob) => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const today = new Date().toISOString().slice(0, 10);
+      a.href = url;
+      a.download = exportFileName ?? `codemind-flowchart-${today}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    }, 'image/png');
+  }, [effectiveNodes]);
+
+  // Expose fitToScreen, resetLayout, centerNode, and downloadPNG to parent via ref
   useImperativeHandle(ref, () => ({
     fitToScreen: () => {
       hasFitRef.current = false;
@@ -194,8 +349,9 @@ const FlowchartCanvasInner = (
     },
     centerNode: (nodeId: string) => {
       centerNode(nodeId);
-    }
-  }), [fitGraph, resetLayout, centerNode]);
+    },
+    downloadPNG: (exportFileName?: string) => downloadPNG(exportFileName),
+  }), [fitGraph, resetLayout, centerNode, downloadPNG]);
 
   // Mouse wheel zoom & pan
   const handleWheel = (e: React.WheelEvent) => {
@@ -414,6 +570,7 @@ const FlowchartCanvasInner = (
     >
       {/* Zoom / Canvas Transformation Container */}
       <div
+        ref={innerContainerRef}
         className="absolute top-0 left-0 origin-top-left transition-transform duration-75"
         style={{
           transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`
@@ -421,6 +578,7 @@ const FlowchartCanvasInner = (
       >
         {/* Dynamic SVG Layer for Edges, Paths, and Arrow Markers */}
         <svg
+          ref={svgRef}
           className="absolute top-0 left-0 pointer-events-none"
           style={{
             width: (bounds?.width || 3000) + 2000,

@@ -12,8 +12,7 @@ import {
   RefreshCw,
   Minimize2,
   Network
-} from 'lucide-react';
-import {
+} from 'lucide-react';import {
   FlowNode,
   FlowchartViewMode,
   GraphLevel,
@@ -429,6 +428,28 @@ export default function FlowchartPanel({
   const handleResetZoom = () => setZoom(1.0);
   const handleFitToScreen = () => canvasRef.current?.fitToScreen();
 
+  // Download PNG handler
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadStatus, setDownloadStatus] = useState<'idle' | 'downloading' | 'done' | 'error'>('idle');
+
+  const handleDownloadPNG = useCallback(async () => {
+    if (!canvasRef.current?.downloadPNG) return;
+    setIsDownloading(true);
+    setDownloadStatus('downloading');
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const safeName = fileName ? fileName.replace(/[^a-zA-Z0-9._-]/g, '-') : 'diagram';
+      await canvasRef.current.downloadPNG(`codemind-flowchart-${safeName}-${today}.png`);
+      setDownloadStatus('done');
+      setTimeout(() => setDownloadStatus('idle'), 2000);
+    } catch {
+      setDownloadStatus('error');
+      setTimeout(() => setDownloadStatus('idle'), 3000);
+    } finally {
+      setIsDownloading(false);
+    }
+  }, [fileName]);
+
   return (
     <div className={`flex flex-col bg-[#1e1e1e] text-[#cccccc] overflow-hidden select-none relative ${
       isFullscreen ? 'fixed inset-0 z-50 shadow-2xl' : 'h-full'
@@ -505,6 +526,8 @@ export default function FlowchartPanel({
         onToggleFullscreen={toggleFullscreen}
         onToggleLegend={() => setShowLegend(prev => !prev)}
         isLegendOpen={showLegend}
+        onDownloadPNG={viewMode !== 'project' ? handleDownloadPNG : undefined}
+        isDownloading={isDownloading}
       />
 
       {/* ── Main Layout: Top Canvas fills available space, Bottom Terminal Docks below (Zero Overlap) ── */}
@@ -626,6 +649,31 @@ export default function FlowchartPanel({
 
       {/* Floating On-Demand Symbol Legend Popover */}
       <FlowLegend isOpen={showLegend} onClose={() => setShowLegend(false)} />
+
+      {/* Download status toast */}
+      {downloadStatus !== 'idle' && (
+        <div className="fixed bottom-6 right-6 z-[300] flex items-center gap-2 px-3 py-2 rounded-lg shadow-xl border text-xs font-medium select-none pointer-events-none
+          bg-[#252526] border-[#3c3c3c] text-[#cccccc]">
+          {downloadStatus === 'downloading' && (
+            <>
+              <Loader2 size={13} className="animate-spin text-[#007acc]" />
+              <span>Downloading…</span>
+            </>
+          )}
+          {downloadStatus === 'done' && (
+            <>
+              <span className="text-[#34d399]">✓</span>
+              <span>Downloaded!</span>
+            </>
+          )}
+          {downloadStatus === 'error' && (
+            <>
+              <span className="text-[#f87171]">✗</span>
+              <span className="text-[#f87171]">Download failed</span>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }

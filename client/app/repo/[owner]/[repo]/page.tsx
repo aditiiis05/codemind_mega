@@ -9,6 +9,7 @@ import CodeEditor from '@/components/CodeEditor';
 import IDELayout from '@/components/layout/IDELayout';
 import MindMapView from '@/components/views/MindMapView'; // <--- IMPORTED VISUALIZER
 import FlowchartPanel from '@/components/flowchart/FlowchartPanel';
+import FlowchartModal from '@/components/flowchart/FlowchartModal';
 import { FileNode } from '@/components/views/ExplorerView';
 import { EditorTab } from '@/components/layout/EditorTabs';
 import { FlowNode } from '@/types/flowchart';
@@ -89,6 +90,7 @@ export default function RepoPage() {
   const [activeRightTab, setActiveRightTab] = useState<'flowchart' | 'mindmap'>('flowchart');
   const [selectedFlowNode, setSelectedFlowNode] = useState<FlowNode | null>(null);
   const [isDiagramFullscreen, setIsDiagramFullscreen] = useState(false);
+  const [isFlowchartModalOpen, setIsFlowchartModalOpen] = useState(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -747,6 +749,7 @@ export default function MermaidChart({ chart }: { chart: string }) {
             fileName={selectedFile?.name || null}
             isFullscreen={isDiagramFullscreen}
             onToggleFullscreen={() => setIsDiagramFullscreen(prev => !prev)}
+            onOpenFullView={() => setIsFlowchartModalOpen(true)}
           />
           {/* Panel body */}
           <div className="flex-1 overflow-hidden min-h-0">
@@ -809,8 +812,7 @@ export default function MermaidChart({ chart }: { chart: string }) {
       repoOwner={owner}
       repoName={repo}
     >
-      <div className="h-full flex flex-col overflow-hidden">
-        {/* Error Message */}
+      <div className="h-full flex flex-col overflow-hidden">        {/* Error Message */}
         {error && (
           <div className="p-3 bg-red-500/20 border border-red-500/50 rounded text-red-300 text-sm m-4 flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0" />
@@ -852,6 +854,21 @@ export default function MermaidChart({ chart }: { chart: string }) {
           )}
         </div>
       </div>
+      {/* Flowchart Full-View Modal */}
+      <FlowchartModal
+        isOpen={isFlowchartModalOpen}
+        onClose={() => setIsFlowchartModalOpen(false)}
+        code={selectedFile ? fileContent : null}
+        fileName={selectedFile?.name || null}
+        language={selectedFile ? getLanguage(selectedFile.name) : null}
+        repoFiles={repoContent.map(f => ({ path: f.path, name: f.name, size: f.size }))}
+        owner={owner}
+        repo={repo}
+        cursorLine={cursorLine}
+        cursorEndLine={cursorEndLine}
+        onNavigateToCode={handleNavigateToCode}
+        onNodeSelect={(node) => setSelectedFlowNode(node)}
+      />
     </IDELayout>
   );
 }

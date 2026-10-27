@@ -18,6 +18,7 @@ import {
   SlidersHorizontal,
   Loader2,
   Scan,
+  Download,
 } from 'lucide-react';
 import { FlowchartViewMode, GraphLevel, FlowFilter } from '@/types/flowchart';
 
@@ -59,6 +60,8 @@ interface FlowToolbarProps {
   onToggleFullscreen?: () => void;
   onToggleLegend?: () => void;
   isLegendOpen?: boolean;
+  onDownloadPNG?: () => void;
+  isDownloading?: boolean;
 }
 
 export default function FlowToolbar({
@@ -91,6 +94,8 @@ export default function FlowToolbar({
   onToggleFullscreen,
   onToggleLegend: _onToggleLegend,
   isLegendOpen: _isLegendOpen,
+  onDownloadPNG,
+  isDownloading = false,
 }: FlowToolbarProps) {
   const [detailOpen, setDetailOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
@@ -383,6 +388,22 @@ export default function FlowToolbar({
         >
           <RefreshCw size={12} className={isAnalyzing ? 'animate-spin text-[#007acc]' : ''} />
         </button>
+
+        {/* Download PNG */}
+        {onDownloadPNG && (
+          <button
+            type="button"
+            onClick={onDownloadPNG}
+            disabled={isDownloading}
+            title="Download as PNG"
+            className="p-1 h-[24px] w-[24px] flex items-center justify-center text-[#858585] hover:text-white hover:bg-[#2a2d2e] rounded transition-colors disabled:opacity-40 cursor-pointer"
+          >
+            {isDownloading
+              ? <Loader2 size={12} className="animate-spin text-[#007acc]" />
+              : <Download size={12} />
+            }
+          </button>
+        )}
 
         {/* Fullscreen */}
         {onToggleFullscreen && (

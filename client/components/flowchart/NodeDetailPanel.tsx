@@ -129,6 +129,8 @@ export default function NodeDetailPanel({
   // Reset or initialize tutor greeting when selected node changes
   useEffect(() => {
     if (!node) return;
+    setIsCollapsed(false);
+    setActiveTab('details');
     setMessages([
       {
         id: `init_${node.id}`,
