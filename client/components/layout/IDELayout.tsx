@@ -127,6 +127,11 @@ export default function IDELayout({
 
   const { themeName, setThemeName } = useTheme();
   const isLightMode = themeName === 'light';
+  // Note: IDELayout panels use hardcoded Tailwind dark colours (bg-[#1e1e1e], etc.) for a
+  // VS Code-faithful dark-shell appearance. The theme toggle primarily affects pages outside
+  // the IDE (login, signup, repository list) where --vscode-* / --color-* CSS variables are
+  // consumed. This is by design — the IDE chrome stays dark while app-level pages follow the
+  // selected colour scheme.
   const toggleTheme = () => setThemeName(isLightMode ? 'darkPlus' : 'light');
 
   // Proportions matching ~1670x900 viewport: left ~335px, right ~440px
@@ -302,7 +307,7 @@ export default function IDELayout({
             className="hover:text-white transition-colors cursor-pointer"
             title={isLightMode ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
           >
-            {isLightMode ? <Sun size={13} /> : <Moon size={13} />}
+            {isLightMode ? <Moon size={13} /> : <Sun size={13} />}
           </button>
           <div className="w-px h-3 bg-[#3c3c3c] mx-1" />
           <button className="hover:text-white transition-colors cursor-pointer" title="Minimize">

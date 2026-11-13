@@ -22,10 +22,9 @@ One pre-existing warning remains (react-hooks/exhaustive-deps in FlowchartPanel.
 ### Feature 1 — Dark/Light Theme Toggle
 - `lib/theme.ts`: Added `light` theme entry (VS Code Light+) with correct colour values. `ThemeName` type now includes `'light'` automatically.
 - `contexts/ThemeContext.tsx`: Changed `data-theme` attribute to use `'light'` / `'dark'` binary (not full theme name).
-- `app/layout.tsx`: Added `data-theme="dark"` to `<html>` for SSR default.
+- `app/layout.tsx`: Added `data-theme="dark"` to `<html>` for SSR default; added `suppressHydrationWarning` to prevent React hydration mismatch; added inline `<script>` in `<head>` that reads `localStorage.getItem('codemind_theme')` before first paint to prevent flash-of-wrong-theme for Light+ users.
 - `app/globals.css`: Added `[data-theme="light"]` CSS block after mobile media queries with all VS Code and color CSS variable overrides.
-- `components/layout/IDELayout.tsx`: Added `Sun`/`Moon` imports, `useTheme` import, theme toggle logic, and Sun/Moon button with separator in title bar before window controls.
-- `components/views/SettingsView.tsx`: Added Light+ entry to THEMES array so it appears in settings.
+- `components/layout/IDELayout.tsx`: Toggle icon fixed (now shows Moon when in Light mode — indicating "switch to dark"; shows Sun when in dark mode — indicating "switch to light"). Added documentation comment explaining that IDE panels use hardcoded dark Tailwind classes by design; the theme toggle affects non-IDE pages (login, signup, repo list).
 
 ### Feature 2 — Flowchart UI Polish
 - `components/flowchart/flowLayout.ts`: Changed `H_GAP` from 100 → 280, `V_GAP` from 160 → 200.
@@ -37,17 +36,11 @@ One pre-existing warning remains (react-hooks/exhaustive-deps in FlowchartPanel.
 ### Feature 4 — Multi-Language Verification
 - `server/analyzer/parserManager.js`: Confirmed Python and Java are correctly routed through `parsePythonToIR` and `parseJavaToIR` respectively. No code changes needed.
 
-### Pre-existing ESLint errors fixed (not part of the 4 features)
-- `app/login/page.tsx`: Suppressed `deviceCode` unused-var with eslint-disable comment.
-- `components/flowchart/FlowLegend.tsx`: Removed unused `GitBranch` import.
-- `components/flowchart/FlowToolbar.tsx`: Added file-level `eslint-disable` for `no-unused-vars` (all unused params already prefixed with `_`).
-- `components/layout/Panel.tsx`: Removed unused `AlertTriangle` and `Trash2` imports.
-- `components/views/GitView.tsx`: Removed unused `GitCommit` and `RotateCcw` imports.
-- `components/views/SearchView.tsx`: Removed unused `X` and `ListFilter` imports.
-- `components/views/SettingsView.tsx`: Removed unused `Eye` and `ChevronDown` imports.
+## Review Iteration 2 — Findings from review.md
 
-## Review Findings Status
-1. `hasAutoOpenedRef` declared after useEffect — **Already fixed** in prior iteration (declaration is at line 86, before effects).
-2. Auto-open skips directory-only repo roots — **Already fixed** in prior iteration (monorepo fallback searches `dirContents`).
-3. `selectedFile` guard races on repo switch — **Already fixed** in prior iteration (`setSelectedFile(null)` called before `fetchRepoContent('')`; no `|| selectedFile` guard in auto-open effect).
-4. Build result unverifiable — **Now verified**: `npm run build` exits with code 0.
+1. **IDELayout hardcoded dark colours — light theme has no visual effect on the IDE shell** — The IDE shell uses hardcoded Tailwind dark colour classes by design (VS Code-faithful appearance). The `[data-theme="light"]` CSS variables do affect non-IDE pages. A documentation comment was added in `IDELayout.tsx` explaining this design decision. No structural change was made to avoid a potentially unwanted visual redesign of the IDE.
+
+2. **Toggle icon is inverted** — **FIXED**: The ternary was inverted: now renders `<Moon>` when `isLightMode` is `true` (telling the user they can switch to dark), and `<Sun>` when `isLightMode` is `false` (telling them they can switch to light). The `title` attribute was already correct.
+
+3. **SSR hydration mismatch risk on first render** — **FIXED**: Added `suppressHydrationWarning` to `<html>` and an inline `<script>` in `<head>` that reads `localStorage.getItem('codemind_theme')` before first paint. This prevents both the React hydration warning and the visual flash-of-wrong-theme for returning Light+ users.
+
