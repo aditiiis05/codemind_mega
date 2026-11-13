@@ -9,6 +9,7 @@ import {
   useMemo,
 } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTheme } from '@/contexts/ThemeContext';
 import StatusBar from './StatusBar';
 import Panel from './Panel';
 import EditorTabs, { type EditorTab } from './EditorTabs';
@@ -31,7 +32,9 @@ import {
   Network,
   MoreHorizontal,
   Minus,
-  Square
+  Square,
+  Sun,
+  Moon
 } from 'lucide-react';
 
 interface IDELayoutProps {
@@ -121,6 +124,10 @@ export default function IDELayout({
   repoName = 'core',
 }: IDELayoutProps) {
   const router = useRouter();
+
+  const { themeName, setThemeName } = useTheme();
+  const isLightMode = themeName === 'light';
+  const toggleTheme = () => setThemeName(isLightMode ? 'darkPlus' : 'light');
 
   // Proportions matching ~1670x900 viewport: left ~335px, right ~440px
   const [leftWidth, setLeftWidth] = useState(335);
@@ -290,6 +297,14 @@ export default function IDELayout({
 
         {/* Right: Window Controls */}
         <div className="flex items-center gap-3 text-[#969696]">
+          <button
+            onClick={toggleTheme}
+            className="hover:text-white transition-colors cursor-pointer"
+            title={isLightMode ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+          >
+            {isLightMode ? <Sun size={13} /> : <Moon size={13} />}
+          </button>
+          <div className="w-px h-3 bg-[#3c3c3c] mx-1" />
           <button className="hover:text-white transition-colors cursor-pointer" title="Minimize">
             <Minus size={13} />
           </button>

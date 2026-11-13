@@ -138,8 +138,8 @@ export function layoutControlFlowGraph(
   const sortedLevels = Array.from(levelGroups.keys()).sort((a, b) => a - b);
 
   // ── Vertical / horizontal spacing constants ─────────────────────────────────
-  const H_GAP = 100;   // horizontal gap between sibling nodes
-  const V_GAP = 160;   // vertical gap between rows — larger for readability
+  const H_GAP = 280;   // wider horizontal gap so sibling branches don't overlap
+  const V_GAP = 200;   // taller vertical gap for spacious top-down layouts
   const START_Y = 80;
   const CENTER_X = 600; // reference centre X for the canvas
 

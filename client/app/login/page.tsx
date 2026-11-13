@@ -29,7 +29,7 @@ export default function LoginPage() {
 
   // Device flow state
   const [deviceStep, setDeviceStep] = useState<"idle" | "waiting" | "polling">("idle");
-  const [deviceCode, setDeviceCode] = useState("");
+  const [deviceCode, setDeviceCode] = useState(""); // eslint-disable-line @typescript-eslint/no-unused-vars
   const [userCode, setUserCode] = useState("");
   const [verificationUri, setVerificationUri] = useState("");
   const [copied, setCopied] = useState(false);

@@ -3,11 +3,9 @@
 import React, { useState } from 'react';
 import {
   GitBranch,
-  GitCommit,
   Check,
   Plus,
   Minus,
-  RotateCcw,
   MoreHorizontal,
   ChevronDown,
   ChevronRight,

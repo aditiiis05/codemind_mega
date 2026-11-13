@@ -56,13 +56,18 @@ export default function MindMapView({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Reset state when selected file content changes
+  // Reset state when selected file changes and auto-generate if content is available
   useEffect(() => {
-    setMermaidCode('');
     setError(null);
     setSearchQuery('');
     setZoom(1.0);
-  }, [selectedFileContent]);
+    if (selectedFileContent && fileName) {
+      handleGenerateMindMap();
+    } else {
+      setMermaidCode('');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fileName]);
 
   // Generate mind map diagram using AI backend
   const handleGenerateMindMap = async () => {

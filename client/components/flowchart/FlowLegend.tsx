@@ -5,7 +5,7 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
-import { X, HelpCircle, GitBranch, ArrowRight, CornerDownLeft, AlertTriangle } from 'lucide-react';
+import { X, HelpCircle, ArrowRight, CornerDownLeft, AlertTriangle } from 'lucide-react';
 
 interface FlowLegendProps {
   isOpen: boolean;

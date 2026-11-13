@@ -146,7 +146,7 @@ const FlowchartCanvasInner = (
     const PAD = 60;
     const scaleX = (cW - PAD * 2) / graphW;
     const scaleY = (cH - PAD * 2) / graphH;
-    const newZoom = Math.min(Math.max(0.35, Math.min(scaleX, scaleY)), 1.2);
+    const newZoom = Math.min(Math.max(0.5, Math.min(scaleX, scaleY)), 1.0);
 
     onZoomChange(newZoom);
 

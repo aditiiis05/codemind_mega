@@ -4,13 +4,11 @@ import React from 'react';
 import {
   Palette,
   Type,
-  Eye,
   Bot,
   Bell,
   Github,
   Info,
   Check,
-  ChevronDown
 } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { ThemeName } from '@/lib/theme';
@@ -21,6 +19,7 @@ const THEMES: Array<{ id: ThemeName; name: string; previewBg: string; previewAcc
   { id: 'githubDark', name: 'GitHub Dark', previewBg: '#0d1117', previewAccent: '#58a6ff' },
   { id: 'oneDark', name: 'One Dark Pro', previewBg: '#282c34', previewAccent: '#61afef' },
   { id: 'dracula', name: 'Dracula', previewBg: '#282a36', previewAccent: '#bd93f9' },
+  { id: 'light', name: 'Light+', previewBg: '#ffffff', previewAccent: '#007acc' },
 ];
 
 export default function SettingsView() {

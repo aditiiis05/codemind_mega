@@ -135,6 +135,33 @@ export const themes = {
       file: '#8be9fd',
     }
   },
+
+  // VS Code Light+
+  light: {
+    name: 'Light+',
+    colors: {
+      background: '#ffffff',
+      backgroundDarker: '#f3f3f3',
+      backgroundLighter: '#fafafa',
+      sidebarBackground: '#f3f3f3',
+      activityBar: '#2c2c2c',
+      editorBackground: '#ffffff',
+      statusBar: '#007acc',
+      border: '#e5e5e5',
+      borderLight: '#cccccc',
+      text: '#333333',
+      textMuted: '#6e6e6e',
+      textBright: '#000000',
+      accent: '#007acc',
+      accentHover: '#005a9e',
+      success: '#388a34',
+      warning: '#a05000',
+      error: '#a1260d',
+      info: '#005fb8',
+      folder: '#c09000',
+      file: '#005fb8',
+    }
+  },
 };
 
 export type ThemeName = keyof typeof themes;

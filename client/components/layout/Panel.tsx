@@ -10,10 +10,8 @@ import {
   FileText,
   Bug,
   Brain,
-  AlertTriangle,
   Info,
   CheckCircle2,
-  Trash2
 } from 'lucide-react';
 
 interface PanelProps {

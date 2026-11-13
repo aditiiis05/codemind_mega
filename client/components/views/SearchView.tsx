@@ -10,9 +10,7 @@ import {
   Regex,
   Replace,
   FileCode,
-  X,
   RefreshCw,
-  ListFilter
 } from 'lucide-react';
 
 interface SearchResultMatch {

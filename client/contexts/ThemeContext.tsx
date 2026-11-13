@@ -97,7 +97,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   // Update root CSS variables when theme changes
   useEffect(() => {
     const root = document.documentElement;
-    root.setAttribute('data-theme', themeName);
+    root.setAttribute('data-theme', themeName === 'light' ? 'light' : 'dark');
     root.style.setProperty('--vscode-bg-editor', currentTheme.colors.editorBackground);
     root.style.setProperty('--vscode-bg-sidebar', currentTheme.colors.sidebarBackground);
     root.style.setProperty('--vscode-bg-activity', currentTheme.colors.activityBar);
