@@ -11,9 +11,10 @@ const Editor = dynamic(
   { 
     ssr: false,
     loading: () => (
-      <div className="flex flex-col items-center justify-center h-full bg-[#1e1e1e] text-[#cccccc] gap-3">
+      <div className="flex flex-col items-center justify-center h-full gap-3"
+        style={{ background: 'var(--ide-bg, #1e1e1e)', color: 'var(--ide-fg, #cccccc)' }}>
         <Loader2 className="w-6 h-6 text-[#007acc] animate-spin" />
-        <span className="text-xs font-mono text-[#858585]">Loading Monaco Editor...</span>
+        <span className="text-xs font-mono" style={{ color: 'var(--ide-fg-muted, #858585)' }}>Loading Monaco Editor...</span>
       </div>
     )
   }
@@ -44,7 +45,8 @@ const CodeEditor = ({
   onCursorChange,
   onSelectionChange
 }: Props) => {
-  const { fontSize, lineNumbers, minimap } = useTheme();
+  const { fontSize, lineNumbers, minimap, themeName } = useTheme();
+  const monacoTheme = themeName === 'light' ? 'vs' : 'vs-dark';
   const [suggestion, setSuggestion] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -165,8 +167,8 @@ const CodeEditor = ({
     editorRef.current = editor;
     monacoRef.current = monaco;
 
-    // Use standard Visual Studio Dark theme
-    monaco.editor.setTheme('vs-dark');
+    // Set theme based on current app theme
+    monaco.editor.setTheme(monacoTheme);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     editor.onDidChangeCursorPosition((e: any) => {
@@ -233,7 +235,7 @@ const CodeEditor = ({
             value={code}
             onChange={(value) => onChange?.(value)}
             onMount={handleEditorDidMount}
-            theme="vs-dark"
+            theme={monacoTheme}
             options={{
               minimap: { enabled: minimap, renderCharacters: false, maxColumn: 80 },
               fontSize: fontSize || 13,
@@ -243,7 +245,6 @@ const CodeEditor = ({
               wordWrap: 'on',
               scrollBeyondLastLine: false,
               readOnly: readOnly,
-              theme: 'vs-dark',
               formatOnPaste: true,
               formatOnType: true,
               autoClosingBrackets: 'always',

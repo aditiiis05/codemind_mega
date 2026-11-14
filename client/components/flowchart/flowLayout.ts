@@ -138,10 +138,26 @@ export function layoutControlFlowGraph(
   const sortedLevels = Array.from(levelGroups.keys()).sort((a, b) => a - b);
 
   // ── Vertical / horizontal spacing constants ─────────────────────────────────
-  const H_GAP = 280;   // wider horizontal gap so sibling branches don't overlap
-  const V_GAP = 200;   // taller vertical gap for spacious top-down layouts
-  const START_Y = 80;
-  const CENTER_X = 600; // reference centre X for the canvas
+  const H_GAP = 60;    // horizontal gap between sibling nodes at same level
+  const V_GAP = 30;    // vertical gap between bottom of one level and top of next
+  const START_Y = 60;
+  const CENTER_X = 600;
+
+  // Pre-compute the max node height per level (so Y advances by actual content height)
+  const levelMaxHeight = new Map<number, number>();
+  nodeMap.forEach(node => {
+    const lvl = node.level;
+    const cur = levelMaxHeight.get(lvl) ?? 0;
+    if (node.height > cur) levelMaxHeight.set(lvl, node.height);
+  });
+
+  // Build cumulative Y positions per level
+  const levelY = new Map<number, number>();
+  let cumY = START_Y;
+  sortedLevels.forEach(lvl => {
+    levelY.set(lvl, cumY);
+    cumY += (levelMaxHeight.get(lvl) ?? 80) + V_GAP;
+  });
 
   // ── Position nodes ──────────────────────────────────────────────────────────
   sortedLevels.forEach(lvl => {
@@ -159,7 +175,7 @@ export function layoutControlFlowGraph(
     // Total row width
     const totalWidth = group.reduce((s, n) => s + n.width, 0) + H_GAP * (group.length - 1);
     let x = CENTER_X - totalWidth / 2;
-    const y = START_Y + lvl * V_GAP;
+    const y = levelY.get(lvl)!;
 
     group.forEach(node => {
       node.x = x;

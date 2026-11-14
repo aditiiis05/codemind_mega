@@ -1252,3 +1252,119 @@ select:disabled {
   --color-repo-hover-bg: #f0f0f0;
   --color-repo-border: #d4d4d4;
 }
+
+/* ── Default mode label ── */
+[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   IDE THEME VARIABLES — used by IDELayout, ActivityBar, StatusBar etc.
+   These are the single source of truth for the IDE shell colours.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Dark mode (default) */
+:root,
+[data-theme="dark"],
+[data-theme="darkPlus"],
+[data-theme="monokai"],
+[data-theme="githubDark"],
+[data-theme="oneDark"],
+[data-theme="dracula"] {
+  --ide-bg:           #1e1e1e;
+  --ide-sidebar:      #252526;
+  --ide-titlebar:     #1e1e1e;
+  --ide-activity:     #181818;
+  --ide-statusbar:    #007acc;
+  --ide-border:       #2b2b2b;
+  --ide-border-light: #3c3c3c;
+  --ide-fg:           #cccccc;
+  --ide-fg-muted:     #858585;
+  --ide-fg-dim:       #969696;
+  --ide-hover:        #2a2d2e;
+  --ide-selected:     #094771;
+  --ide-tab-active:   #1e1e1e;
+  --ide-tab-inactive: #2d2d2d;
+  --ide-input-bg:     #3c3c3c;
+  --ide-accent:       #007acc;
+  --ide-input-border:   #3c3c3c;
+  --ide-input-text:     #cccccc;
+  --ide-btn-bg:         #2d2d2d;
+  --ide-btn-text:       #cccccc;
+  --ide-btn-hover:      #3c3c3c;
+  --ide-panel-header:   #323233;
+  --ide-tab-border:     #252526;
+  --ide-terminal-bg:    #1e1e1e;
+  --ide-dropdown-bg:    #252526;
+  --ide-dropdown-hover: #094771;
+  --ide-code-bg:        #1e1e1e;
+  --ide-node-inspector: #212122;
+  --ide-chat-bg:        #121217;
+  --ide-chat-surface:   #1c1c24;
+  --ide-chat-bubble:    #24242e;
+  --ide-chat-banner:    #181820;
+  --ide-chat-fg:        #f2f2f7;
+  --ide-chat-fg-muted:  #8e8e9a;
+}
+
+/* Light mode — VS Code Light+ */
+[data-theme="light"] {
+  --ide-bg:           #ffffff;
+  --ide-sidebar:      #f3f3f3;
+  --ide-titlebar:     #dddddd;
+  --ide-activity:     #2c2c2c;
+  --ide-statusbar:    #007acc;
+  --ide-border:       #e0e0e0;
+  --ide-border-light: #d4d4d4;
+  --ide-fg:           #333333;
+  --ide-fg-muted:     #6e6e6e;
+  --ide-fg-dim:       #555555;
+  --ide-hover:        #e8e8e8;
+  --ide-selected:     #cce5ff;
+  --ide-tab-active:   #ffffff;
+  --ide-tab-inactive: #ececec;
+  --ide-input-bg:     #f0f0f0;
+  --ide-accent:       #007acc;
+  --ide-input-border:   #d0d0d0;
+  --ide-input-text:     #333333;
+  --ide-btn-bg:         #e8e8e8;
+  --ide-btn-text:       #333333;
+  --ide-btn-hover:      #d8d8d8;
+  --ide-panel-header:   #e8e8e8;
+  --ide-tab-border:     #d4d4d4;
+  --ide-terminal-bg:    #f8f8f8;
+  --ide-dropdown-bg:    #ffffff;
+  --ide-dropdown-hover: #cce5ff;
+  --ide-code-bg:        #f8f8f8;
+  --ide-node-inspector: #f0f0f0;
+  --ide-chat-bg:        #ffffff;
+  --ide-chat-surface:   #f3f3f3;
+  --ide-chat-bubble:    #f6f6f6;
+  --ide-chat-banner:    #ececec;
+  --ide-chat-fg:        #1a1a1a;
+  --ide-chat-fg-muted:  #5a5a5a;
+}
+
+/* IDE hover + button hover utilities (read CSS vars in both modes) */
+.ide-hover:hover {
+  background-color: var(--ide-hover) !important;
+}
+
+.ide-btn-hover:hover {
+  background-color: var(--ide-btn-hover) !important;
+}
+
+/* Light-mode scrollbar helper (scoped, not a broad bg-[#hex] override) */
+[data-theme="light"] .ide-scrollbar::-webkit-scrollbar-thumb,
+[data-theme="light"] .ide-panel::-webkit-scrollbar-thumb {
+  background-color: #c0c0c0;
+}
+
+[data-theme="light"] .ide-scrollbar::-webkit-scrollbar-thumb:hover,
+[data-theme="light"] .ide-panel::-webkit-scrollbar-thumb:hover {
+  background-color: #a0a0a0;
+}

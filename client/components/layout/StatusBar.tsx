@@ -29,7 +29,8 @@ export default function StatusBar({
 
   return (
     <footer
-      className="h-[22px] shrink-0 bg-[#007acc] text-[#ffffff] flex items-center justify-between px-2 text-[12px] select-none z-20 font-sans"
+      className="h-[22px] shrink-0 text-white flex items-center justify-between px-2 text-[12px] select-none z-20 font-sans"
+      style={{ background: 'var(--ide-statusbar, #007acc)' }}
       aria-label="Status Bar"
     >
       {/* ── Left Status Items ── */}

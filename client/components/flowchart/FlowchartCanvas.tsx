@@ -146,15 +146,24 @@ const FlowchartCanvasInner = (
     const PAD = 60;
     const scaleX = (cW - PAD * 2) / graphW;
     const scaleY = (cH - PAD * 2) / graphH;
-    const newZoom = Math.min(Math.max(0.5, Math.min(scaleX, scaleY)), 1.0);
+
+    // Always fit to width — nodes stay readable.
+    // If the diagram also fits vertically at that scale, use min(scaleX, scaleY).
+    // This prevents overshrinking tall diagrams to unreadable dots.
+    const widthFit = Math.min(scaleX, 1.0);
+    const bothFit = Math.min(scaleX, scaleY);
+    const newZoom = Math.min(Math.max(0.35, bothFit >= 0.45 ? bothFit : widthFit), 1.0);
 
     onZoomChange(newZoom);
 
     const graphCenterX = (b.minX + b.maxX) / 2;
-    const graphCenterY = (b.minY + b.maxY) / 2;
+
+    // Always start at the top of the diagram, centered horizontally
+    const panY = PAD - b.minY * newZoom;
+
     setPan({
       x: cW / 2 - graphCenterX * newZoom,
-      y: Math.max(30, cH / 2 - graphCenterY * newZoom)
+      y: panY
     });
   }, [bounds, effectiveNodes, onZoomChange]);
 

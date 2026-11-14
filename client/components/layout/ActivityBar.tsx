@@ -49,7 +49,8 @@ export default function ActivityBar({
 }: ActivityBarProps) {
   return (
     <aside
-      className="w-[48px] shrink-0 bg-[#181818] border-r border-[#2b2b2b] flex flex-col items-center py-1 select-none z-30 justify-between h-full"
+      className="w-[48px] shrink-0 border-r flex flex-col items-center py-1 select-none z-30 justify-between h-full"
+      style={{ background: 'var(--ide-activity, #181818)', borderColor: 'var(--ide-border, #2b2b2b)' }}
       aria-label="Activity Bar"
     >
       {/* ── Top Section: Logo & Main Navigation ── */}

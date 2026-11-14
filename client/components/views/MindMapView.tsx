@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Search,
   X,
@@ -18,6 +18,7 @@ import {
   Radio
 } from 'lucide-react';
 import MermaidChart, { MermaidChartHandle } from '../MermaidChart';
+import { analyzeFile } from '@/services/flowchartApi';
 
 interface MindMapViewProps {
   selectedFileContent?: string | null;
@@ -56,6 +57,79 @@ export default function MindMapView({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Generate mind map diagram from flowchart data — no AI needed, works offline
+  const handleGenerateMindMap = useCallback(async () => {
+    if (!selectedFileContent || !fileName) return;
+
+    setIsLoading(true);
+    setError(null);
+    setMermaidCode('');
+
+    try {
+      const ext = fileName.split('.').pop()?.toLowerCase() || 'js';
+      const langMap: Record<string, string> = {
+        js: 'javascript', jsx: 'javascript', ts: 'typescript', tsx: 'typescript',
+        py: 'python', java: 'java', go: 'go', rs: 'rust', cs: 'csharp',
+        rb: 'ruby', php: 'php', cpp: 'cpp', c: 'c',
+      };
+      const lang = langMap[ext] || 'javascript';
+
+      const result = await analyzeFile({ code: selectedFileContent, language: lang, fileName });
+
+      const baseName = fileName.split('/').pop()?.replace(/\.[^.]+$/, '') || fileName;
+      const sanitize = (s: string) => s.replace(/[`"()[\]{}<>]/g, '').trim().slice(0, 48) || 'node';
+
+      const functions = result.nodes.filter(n => n.type === 'FUNCTION');
+      const decisions = result.nodes.filter(n => n.type === 'DECISION');
+      const loops = result.nodes.filter(n => n.type === 'LOOP');
+      const processes = result.nodes.filter(n => n.type === 'PROCESS').slice(0, 6);
+      const returns = result.nodes.filter(n => n.type === 'RETURN');
+
+      const lines: string[] = ['mindmap', `  root((**${sanitize(baseName)}**))`];
+
+      if (functions.length > 0) {
+        lines.push('    Functions');
+        functions.slice(0, 8).forEach(n => lines.push(`      ${sanitize(n.label)}`));
+      }
+      if (decisions.length > 0) {
+        lines.push('    Decisions');
+        decisions.slice(0, 6).forEach(n => lines.push(`      ${sanitize(n.label)}`));
+      }
+      if (loops.length > 0) {
+        lines.push('    Loops');
+        loops.slice(0, 4).forEach(n => lines.push(`      ${sanitize(n.label)}`));
+      }
+      if (processes.length > 0) {
+        lines.push('    Statements');
+        processes.forEach(n => lines.push(`      ${sanitize(n.label)}`));
+      }
+      if (returns.length > 0) {
+        lines.push('    Returns');
+        returns.slice(0, 4).forEach(n => lines.push(`      ${sanitize(n.label)}`));
+      }
+
+      setMermaidCode(lines.join('\n'));
+    } catch (err: unknown) {
+      console.error('[MindMapView] Error generating diagram:', err);
+      const baseName = fileName.split('/').pop() || fileName;
+      const fnLines = selectedFileContent.split('\n')
+        .filter(l => /function\s+\w+|def\s+\w+|class\s+\w+/.test(l))
+        .slice(0, 8)
+        .map(l => `      ${l.trim().slice(0, 40).replace(/[`"()[\]{}<>]/g, '')}`);
+      setMermaidCode([
+        'mindmap',
+        `  root((${baseName}))`,
+        '    Structure',
+        ...(fnLines.length ? fnLines : ['      open file to analyze']),
+      ].join('\n'));
+      if (err instanceof Error && !err.message.includes('network')) {
+        setError(`Could not analyze: ${err.message}`);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, [selectedFileContent, fileName]);
+
   // Reset state when selected file changes and auto-generate if content is available
   useEffect(() => {
     setError(null);
@@ -66,71 +140,14 @@ export default function MindMapView({
     } else {
       setMermaidCode('');
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fileName]);
-
-  // Generate mind map diagram using AI backend
-  const handleGenerateMindMap = async () => {
-    if (!selectedFileContent) return;
-
-    setIsLoading(true);
-    setError(null);
-    setMermaidCode('');
-
-    try {
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4000';
-      const response = await fetch(`${API_BASE_URL}/api/ai/generate-diagram`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          codeContent: selectedFileContent,
-          diagramType: viewMode === 'radial' ? 'flowchart' : 'mindmap',
-          fileName: fileName || null,
-          language: language || null,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || errorData.details || `HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-
-      if (data.success && data.mermaidCode) {
-        setMermaidCode(data.mermaidCode);
-      } else {
-        throw new Error(data.error || 'No diagram generated by the AI.');
-      }
-    } catch (err: unknown) {
-      console.error('[MindMapView] Error generating diagram:', err);
-      // Fallback demo mindmap if server is unavailable
-      setMermaidCode(`mindmap
-  root((CodeMind Architecture))
-    Frontend [Next.js App]
-      Components
-        CodeEditor
-        MindMapView
-        ActivityBar
-        IDELayout
-      State Management
-        ThemeContext
-    Backend [Express Server]
-      AST Engine
-      Ollama LLM Tutor
-      Flowchart Analyzer`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [fileName, selectedFileContent, handleGenerateMindMap]);
 
   // Handle external trigger for generation
   useEffect(() => {
     if (triggerGeneration?.type === 'mindmap' && selectedFileContent && triggerGeneration.timestamp) {
       handleGenerateMindMap();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [triggerGeneration?.timestamp]);
+  }, [triggerGeneration?.timestamp, handleGenerateMindMap, selectedFileContent]);
 
   // Estimate node count from mermaid code
   const nodeCount = React.useMemo(() => {

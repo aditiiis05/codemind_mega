@@ -73,7 +73,8 @@ export default function EditorTabs({
   const breadcrumbParts = activeTab?.id ? activeTab.id.split('/').filter(Boolean) : [activeTab?.name || 'untitled.tsx'];
 
   return (
-    <div className="flex flex-col shrink-0 select-none bg-[#252526] border-b border-[#1e1e1e]">
+    <div className="flex flex-col shrink-0 select-none border-b"
+      style={{ background: 'var(--ide-sidebar, #252526)', borderColor: 'var(--ide-bg, #1e1e1e)' }}>
       {/* ── Top Tabs Row (Exact VS Code 35px height) ── */}
       <div className="h-[35px] flex items-center justify-between gap-0 overflow-x-auto scrollbar-none">
         <div className="flex items-center h-full min-w-0">

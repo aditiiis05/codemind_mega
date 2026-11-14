@@ -126,13 +126,6 @@ export default function IDELayout({
   const router = useRouter();
 
   const { themeName, setThemeName } = useTheme();
-  const isLightMode = themeName === 'light';
-  // Note: IDELayout panels use hardcoded Tailwind dark colours (bg-[#1e1e1e], etc.) for a
-  // VS Code-faithful dark-shell appearance. The theme toggle primarily affects pages outside
-  // the IDE (login, signup, repository list) where --vscode-* / --color-* CSS variables are
-  // consumed. This is by design — the IDE chrome stays dark while app-level pages follow the
-  // selected colour scheme.
-  const toggleTheme = () => setThemeName(isLightMode ? 'darkPlus' : 'light');
 
   // Proportions matching ~1670x900 viewport: left ~335px, right ~440px
   const [leftWidth, setLeftWidth] = useState(335);
@@ -233,11 +226,13 @@ export default function IDELayout({
   }, [allFlattenedFiles, searchQuery]);
 
   return (
-    <div className="h-screen w-screen flex flex-col bg-[#1e1e1e] text-[#cccccc] overflow-hidden select-none relative font-sans">
+    <div className="h-screen w-screen flex flex-col overflow-hidden select-none relative font-sans"
+      style={{ background: 'var(--ide-bg, #1e1e1e)', color: 'var(--ide-fg, #cccccc)' }}>
       {/* ── VISUAL STUDIO TOP TITLE BAR ── */}
-      <header className="h-[32px] shrink-0 bg-[#1e1e1e] border-b border-[#2b2b2b] flex items-center justify-between px-3 z-30 select-none">
+      <header className="h-[32px] shrink-0 border-b flex items-center justify-between px-3 z-30 select-none"
+        style={{ background: 'var(--ide-titlebar, #1e1e1e)', borderColor: 'var(--ide-border, #2b2b2b)', color: 'var(--ide-fg-muted, #969696)' }}>
         {/* Left: Classic Menu items */}
-        <div className="flex items-center gap-0.5 text-xs text-[#969696]">
+        <div className="flex items-center gap-0.5 text-xs">
           <button
             type="button"
             onClick={() => router.push('/')}
@@ -300,16 +295,47 @@ export default function IDELayout({
           )}
         </div>
 
-        {/* Right: Window Controls */}
-        <div className="flex items-center gap-3 text-[#969696]">
-          <button
-            onClick={toggleTheme}
-            className="hover:text-white transition-colors cursor-pointer"
-            title={isLightMode ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
-          >
-            {isLightMode ? <Moon size={13} /> : <Sun size={13} />}
-          </button>
-          <div className="w-px h-3 bg-[#3c3c3c] mx-1" />
+        {/* Right: Theme selector + Window Controls */}
+        <div className="flex items-center gap-2 text-[#969696]">
+          {/* 3-way theme selector */}
+          <div className="flex items-center bg-[#2d2d2d] border border-[#3c3c3c] rounded overflow-hidden">
+            <button
+              onClick={() => setThemeName('darkPlus')}
+              title="Dark Mode"
+              className={`flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium transition-colors cursor-pointer ${
+                themeName === 'darkPlus'
+                  ? 'bg-[#007acc] text-white'
+                  : 'text-[#858585] hover:text-white hover:bg-[#3c3c3c]'
+              }`}
+            >
+              <Moon size={10} />
+              <span>Dark</span>
+            </button>
+            <button
+              onClick={() => setThemeName('githubDark')}
+              title="Default (GitHub Dark)"
+              className={`flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium transition-colors cursor-pointer border-x border-[#3c3c3c] ${
+                themeName === 'githubDark'
+                  ? 'bg-[#007acc] text-white'
+                  : 'text-[#858585] hover:text-white hover:bg-[#3c3c3c]'
+              }`}
+            >
+              <span>Default</span>
+            </button>
+            <button
+              onClick={() => setThemeName('light')}
+              title="Light Mode"
+              className={`flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium transition-colors cursor-pointer ${
+                themeName === 'light'
+                  ? 'bg-[#007acc] text-white'
+                  : 'text-[#858585] hover:text-white hover:bg-[#3c3c3c]'
+              }`}
+            >
+              <Sun size={10} />
+              <span>Light</span>
+            </button>
+          </div>
+          <div className="w-px h-3 bg-[#3c3c3c]" />
           <button className="hover:text-white transition-colors cursor-pointer" title="Minimize">
             <Minus size={13} />
           </button>
@@ -323,7 +349,8 @@ export default function IDELayout({
       </header>
 
       {/* ── MAIN THREE-COLUMN FLUSH WORKSPACE ── */}
-      <div className="flex-1 flex overflow-hidden min-h-0 relative bg-[#1e1e1e]">
+      <div className="flex-1 flex overflow-hidden min-h-0 relative"
+        style={{ background: 'var(--ide-bg, #1e1e1e)' }}>
         {/* ── 1. NARROW ACTIVITY BAR ── */}
         <ActivityBar
           activeView={activeActivityView}
@@ -348,12 +375,13 @@ export default function IDELayout({
 
         {/* ── 2. LEFT PANEL: EXPLORER & PROJECT VISUALIZATION ── */}
         <div
-          className="ide-panel flex flex-col shrink-0 overflow-hidden transition-all duration-150 bg-[#252526] border-r border-[#2b2b2b]"
-          style={{ width: leftCollapsed ? 32 : leftWidth }}
+          className="ide-panel flex flex-col shrink-0 overflow-hidden transition-all duration-150 border-r"
+          style={{ background: 'var(--ide-sidebar, #252526)', borderColor: 'var(--ide-border, #2b2b2b)', width: leftCollapsed ? 32 : leftWidth }}
         >
           {leftCollapsed ? (
             /* Left Collapsed Strip */
-            <div className="flex flex-col items-center py-3 gap-4 h-full bg-[#252526]">
+            <div className="flex flex-col items-center py-3 gap-4 h-full"
+              style={{ background: 'var(--ide-sidebar, #252526)' }}>
               <button
                 onClick={() => setLeftCollapsed(false)}
                 aria-label="Expand Left Panel"
@@ -416,10 +444,13 @@ export default function IDELayout({
                 </div>
               ) : (
                 /* DEFAULT: FULL-HEIGHT EXPLORER MATCHING VS CODE SCREENSHOT */
-                <div className="flex flex-col h-full overflow-hidden bg-[#252526]">
+                <div className="flex flex-col h-full overflow-hidden"
+                  style={{ background: 'var(--ide-sidebar, #252526)' }}>
                   {/* Explorer Header */}
-                  <div className="h-[35px] flex items-center justify-between px-3 bg-[#252526] border-b border-[#2b2b2b] shrink-0">
-                    <span className="text-[11px] uppercase tracking-wider font-semibold text-[#bbbbbb]">
+                  <div className="h-[35px] flex items-center justify-between px-3 border-b shrink-0"
+                    style={{ background: 'var(--ide-sidebar, #252526)', borderColor: 'var(--ide-border, #2b2b2b)' }}>
+                    <span className="text-[11px] uppercase tracking-wider font-semibold"
+                      style={{ color: 'var(--ide-fg-muted, #bbbbbb)' }}>
                       EXPLORER
                     </span>
 
@@ -448,15 +479,17 @@ export default function IDELayout({
                   </div>
 
                   {/* Root project collapsible section header: e.g. CODEMIND1 */}
-                  <div className="px-2 py-1 bg-[#252526] border-b border-[#2b2b2b]/40 flex items-center gap-1 text-xs font-semibold text-[#cccccc] cursor-pointer hover:bg-[#2a2d2e] select-none shrink-0">
-                    <ChevronDown size={14} className="text-[#858585]" />
+                  <div className="px-2 py-1 border-b flex items-center gap-1 text-xs font-semibold cursor-pointer select-none shrink-0"
+                    style={{ background: 'var(--ide-sidebar, #252526)', borderColor: 'var(--ide-border, #2b2b2b)', color: 'var(--ide-fg, #cccccc)' }}>
+                    <ChevronDown size={14} style={{ color: 'var(--ide-fg-muted, #858585)' }} />
                     <span className="uppercase tracking-wider font-bold text-[11px]">
                       {repoName?.toUpperCase() || 'CODEMIND1'}
                     </span>
                   </div>
 
                   {/* Explorer Tree Content - Full Height */}
-                  <div className="flex-1 overflow-y-auto ide-scrollbar p-1 bg-[#252526]">
+                  <div className="flex-1 overflow-y-auto ide-scrollbar p-1"
+                    style={{ background: 'var(--ide-sidebar, #252526)' }}>
                     {isTreeLoading ? (
                       <div className="flex items-center gap-2 px-3 py-4 text-[#858585]">
                         <Loader2 size={13} className="animate-spin text-[#007acc]" />
@@ -489,7 +522,8 @@ export default function IDELayout({
         )}
 
         {/* ── 3. CENTRAL CODE EDITOR & INTEGRATED BOTTOM TERMINAL ── */}
-        <div className="ide-panel flex-1 flex flex-col bg-[#1e1e1e] overflow-hidden min-w-[380px]">
+        <div className="ide-panel flex-1 flex flex-col overflow-hidden min-w-[380px]"
+          style={{ background: 'var(--ide-bg, #1e1e1e)' }}>
           {/* Editor Tabs & File Breadcrumb Header */}
           {tabs.length > 0 && (
             <EditorTabs
@@ -550,12 +584,13 @@ export default function IDELayout({
 
         {/* ── 4. RIGHT PANEL: CODEMIND AI ASSISTANT ── */}
         <div
-          className="ide-panel flex flex-col bg-[#252526] border-l border-[#2b2b2b] shrink-0 overflow-hidden transition-all duration-150"
-          style={{ width: rightCollapsed ? 32 : rightWidth }}
+          className="ide-panel flex flex-col border-l shrink-0 overflow-hidden transition-all duration-150"
+          style={{ background: 'var(--ide-sidebar, #252526)', borderColor: 'var(--ide-border, #2b2b2b)', width: rightCollapsed ? 32 : rightWidth }}
         >
           {rightCollapsed ? (
             /* Right Collapsed Strip */
-            <div className="flex flex-col items-center py-3 gap-4 h-full bg-[#252526]">
+            <div className="flex flex-col items-center py-3 gap-4 h-full"
+              style={{ background: 'var(--ide-sidebar, #252526)' }}>
               <button
                 onClick={() => setRightCollapsed(false)}
                 aria-label="Expand AI panel"
